@@ -24,7 +24,7 @@ class HDF5Dataset(Dataset):
         self.group_names = list(self.h5file.keys())
         self.total_videos = sum(len(self.h5file[group_name]) for group_name in self.group_names)
         self.resize_size = (224, 224)
-        self.frame_info_path = "/content/drive/MyDrive/Tesi/Transformer/Testing/lib/frame_info.pkl"
+        self.frame_info_path = "/content/drive/MyDrive/Tesi/lus-dl-framework/libraries/frame_info.pkl"
          # Try to load serialized data
         try:
             with open(self.frame_info_path, 'rb') as f:

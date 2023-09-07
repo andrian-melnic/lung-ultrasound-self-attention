@@ -6,7 +6,7 @@ import h5py
 
 # Import custom libs
 import sys
-sys.path.append('/content/drive/MyDrive/Tesi/Transformer/Testing/lib')
+sys.path.append('/content/drive/MyDrive/Tesi/lus-dl-framework/libraries')
 
 import dataset_utility as util
 from LazyLoadingDataset import LazyLoadingDataset
@@ -23,7 +23,7 @@ class USDataModule(pl.LightningDataModule):
     def __init__(self, data_dir: str = "/content/drive/MyDrive/Tesi/dataset/dataset_full.h5"):
         super().__init__()
         self.input_file = data_dir
-        self.batch_size = 
+        self.batch_size = 90
         self.num_workers = 4
         #self.transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))])
 

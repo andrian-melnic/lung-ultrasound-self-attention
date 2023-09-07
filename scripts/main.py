@@ -8,7 +8,7 @@ import h5py
 
 # Import custom libs
 import sys
-sys.path.append('/content/drive/MyDrive/Tesi/Transformer/Testing/lib')
+sys.path.append('/content/drive/MyDrive/Tesi/lus-dl-framework/libraries')
 from HDF5Dataset import HDF5Dataset
 from ViTLightningModule import ViTLightningModule
 

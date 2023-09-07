@@ -18,7 +18,7 @@ import h5py
 
 # Import custom libs
 import sys
-sys.path.append('/content/drive/MyDrive/Tesi/Transformer/Testing/lib')
+sys.path.append('/content/drive/MyDrive/Tesi/lus-dl-framework/libraries')
 
 import dataset_utility as util
 from LazyLoadingDataset import LazyLoadingDataset
