@@ -15,17 +15,18 @@ import torchmetrics
 from transformers import ViTForImageClassification
 import h5py
 
-
+working_dir = "/content/drive/MyDrive/Tesi/lus-dl-framework"
+libraries_dir = working_dir + "/libraries"
+data_file = working_dir + "/data/dataset_test.h5"
 # Import custom libs
 import sys
-sys.path.append('/content/drive/MyDrive/Tesi/lus-dl-framework/libraries')
+sys.path.append(working_dir)
 
 import dataset_utility as util
 from LazyLoadingDataset import LazyLoadingDataset
 from HDF5Dataset import HDF5Dataset
 
 # Dataset ---------------------------------------------------------------
-input_file = "/content/drive/MyDrive/Tesi/dataset/dataset_full.h5"
 def collate_fn(examples):
     frames = torch.stack([example[0] for example in examples])  # Extract the preprocessed frames
     scores = torch.tensor([example[1] for example in examples])  # Extract the scores
@@ -34,7 +35,7 @@ batch_size = 90
 num_workers = 4
 
 print("Setting up the Dataset")
-dataset = HDF5Dataset(input_file)
+dataset = HDF5Dataset(data_file)
 dataset_size = len(dataset)
 
 train_size = int(0.7 * dataset_size)

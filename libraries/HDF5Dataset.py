@@ -18,13 +18,13 @@ from torchvision.transforms import (CenterCrop,
 
 
 class HDF5Dataset(Dataset):
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.h5file = h5py.File(file_path, 'r')
+    def __init__(self, data_file, working_dir):
+        self.data_file = data_file
+        self.h5file = h5py.File(data_file, 'r')
         self.group_names = list(self.h5file.keys())
         self.total_videos = sum(len(self.h5file[group_name]) for group_name in self.group_names)
         self.resize_size = (224, 224)
-        self.frame_info_path = "/content/drive/MyDrive/Tesi/lus-dl-framework/libraries/frame_info.pkl"
+        self.frame_info_path = working_dir + "/libraries/frame_info.pkl"
          # Try to load serialized data
         try:
             with open(self.frame_info_path, 'rb') as f:
