@@ -10,16 +10,16 @@ libraries_dir = working_dir + "/libraries"
 data_file = working_dir + "/data/dataset_test.h5"
 
 # Import custom libs
-import sys
-sys.path.append(working_dir)
-from HDF5Dataset import HDF5Dataset
-from ViTLightningModule import ViTLightningModule
+# import sys
+# sys.path.append(working_dir)
+from libraries.HDF5Dataset import HDF5Dataset
+from libraries.ViTLightningModule import ViTLightningModule, pp_frames
 
 # Dataset ---------------------------------------------------------------
 
 
 print("Setting up the Dataset")
-dataset = HDF5Dataset(data_file)
+dataset = HDF5Dataset(data_file, working_dir, pp_frames)
 dataset_size = len(dataset)
 
 train_size = int(0.7 * dataset_size)
