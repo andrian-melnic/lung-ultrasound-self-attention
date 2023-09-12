@@ -4,6 +4,16 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
 import torch
+from transformers import ViTImageProcessor
+from torchvision.transforms import (CenterCrop,
+                                    Compose,
+                                    Normalize,
+                                    RandomHorizontalFlip,
+                                    RandomResizedCrop,
+                                    Resize,
+                                    ToTensor)
+import torchvision.transforms as transforms
+
 
 
 def collate_fn(examples):
@@ -13,6 +23,23 @@ def collate_fn(examples):
   
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
 label2id = {"no": 0, "yellow": 1, "orange": 2, "red": 3}
+
+# This function transforms the images with the same pre processing operations
+# used for training the ViT
+def pp_frames(frame_data):
+    processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
+    image_mean = processor.image_mean
+    image_std = processor.image_std
+    size = processor.size["height"]
+    normalize = Normalize(mean=image_mean, std=image_std)
+
+
+    frame_tensor = transforms.ToTensor()(frame_data)
+    frame_tensor = transforms.Resize(size, antialias=True)(frame_tensor)
+    frame_tensor = transforms.CenterCrop(size)(frame_tensor)
+    frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+
+    return frame_tensor.permute(0, 2, 1)
 
 class ViTLightningModule(pl.LightningModule):
     def __init__(self, train, test, val, batch_size=90, num_workers=4):
@@ -71,7 +98,7 @@ class ViTLightningModule(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=2e-5)
 
     def train_dataloader(self):
-      return DataLoader(self.train_dataset,
+        return DataLoader(self.train_dataset,
                             shuffle=True,
                             collate_fn=collate_fn,
                             batch_size=self.batch_size,
@@ -88,5 +115,6 @@ class ViTLightningModule(pl.LightningModule):
                             collate_fn=collate_fn,
                             batch_size=self.batch_size,
                             num_workers=self.num_workers, persistent_workers=True)
+
 
 print("-"*20)

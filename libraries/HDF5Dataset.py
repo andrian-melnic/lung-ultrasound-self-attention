@@ -5,27 +5,20 @@ import pickle
 import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
-import torchvision.transforms as transforms
-from transformers import ViTImageProcessor
-from torchvision.transforms import (CenterCrop,
-                                    Compose,
-                                    Normalize,
-                                    RandomHorizontalFlip,
-                                    RandomResizedCrop,
-                                    Resize,
-                                    ToTensor)
+
 
 
 
 class HDF5Dataset(Dataset):
-    def __init__(self, data_file, working_dir):
+    def __init__(self, data_file, working_dir, frames_preprocessing_pipeline):
+        self.pp_frames = frames_preprocessing_pipeline
         self.data_file = data_file
         self.h5file = h5py.File(data_file, 'r')
         self.group_names = list(self.h5file.keys())
         self.total_videos = sum(len(self.h5file[group_name]) for group_name in self.group_names)
         self.resize_size = (224, 224)
         self.frame_info_path = working_dir + "/libraries/frame_info.pkl"
-         # Try to load serialized data
+        # Try to load serialized data
         try:
             with open(self.frame_info_path, 'rb') as f:
                 print("Serialized frame index map FOUND.")
@@ -66,26 +59,7 @@ class HDF5Dataset(Dataset):
 
     def __len__(self):
         return self.total_frames
-
-    # This function transforms the images with the same pre processing operations
-    # used for training the ViT
-    def pp_frames(self, frame_data):
-        processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-        image_mean = processor.image_mean
-        image_std = processor.image_std
-        size = processor.size["height"]
-        normalize = Normalize(mean=image_mean, std=image_std)
-
-
-        frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(size, antialias=True)(frame_tensor)
-        frame_tensor = transforms.CenterCrop(size)(frame_tensor)
-        frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
-
-        return frame_tensor.permute(0, 2, 1)
-
-
-
+      
     def __getitem__(self, index):
         if index < 0 or index >= self.total_frames:
             raise IndexError("Index out of range")
