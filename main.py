@@ -7,7 +7,7 @@ import h5py
 
 working_dir = "/content/drive/MyDrive/Tesi/lus-dl-framework"
 libraries_dir = working_dir + "/libraries"
-data_file = working_dir + "/data/dataset_test.h5"
+data_file = working_dir + "/data/dataset_full.h5"
 
 # Import custom libs
 # import sys
