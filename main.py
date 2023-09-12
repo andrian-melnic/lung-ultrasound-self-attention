@@ -5,21 +5,21 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, DeviceStatsMonitor
 import h5py
 
-working_dir = "/content/drive/MyDrive/Tesi/lus-dl-framework"
+working_dir = "."
 libraries_dir = working_dir + "/libraries"
 data_file = working_dir + "/data/dataset_test.h5"
 
 # Import custom libs
-import sys
-sys.path.append(working_dir)
-from HDF5Dataset import HDF5Dataset
-from ViTLightningModule import ViTLightningModule
+# import sys
+# sys.path.append(working_dir)
+from libraries.HDF5Dataset import HDF5Dataset
+from libraries.ViTLightningModule import ViTLightningModule
 
 # Dataset ---------------------------------------------------------------
 
 
 print("Setting up the Dataset")
-dataset = HDF5Dataset(data_file)
+dataset = HDF5Dataset(data_file, working_dir)
 dataset_size = len(dataset)
 
 train_size = int(0.7 * dataset_size)
@@ -67,7 +67,7 @@ trainer = Trainer(precision=16,
                   accelerator=args.accelerator,
                   accumulate_grad_batches=args.accumulate_grad_batches,
                   max_epochs=args.max_epochs,
-                  callbacks=callbacks,
-                  strategy="ddp")
+                  callbacks=callbacks)
+                  # strategy="ddp")
 trainer.fit(model)
 trainer.test()

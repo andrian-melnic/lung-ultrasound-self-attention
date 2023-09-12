@@ -74,19 +74,19 @@ class ViTLightningModule(pl.LightningModule):
       return DataLoader(self.train_dataset,
                             shuffle=True,
                             collate_fn=collate_fn,
-                            batch_size=self.batch_size,
-                            num_workers=self.num_workers, persistent_workers=True)
+                            batch_size=self.batch_size)
+                            # num_workers=self.num_workers, persistent_workers=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset,
                             collate_fn=collate_fn,
-                            batch_size=self.batch_size,
-                            num_workers=self.num_workers, persistent_workers=True)
+                            batch_size=self.batch_size)
+                            # num_workers=self.num_workers, persistent_workers=True)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
                             collate_fn=collate_fn,
-                            batch_size=self.batch_size,
-                            num_workers=self.num_workers, persistent_workers=True)
+                            batch_size=self.batch_size)
+                            # num_workers=self.num_workers, persistent_workers=True)
 
 print("-"*20)

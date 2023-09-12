@@ -12,6 +12,7 @@ frame_info.pkl
 .Python
 build/
 develop-eggs/
+data/
 dist/
 downloads/
 eggs/
