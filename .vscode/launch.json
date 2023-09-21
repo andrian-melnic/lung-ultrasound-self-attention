@@ -8,16 +8,24 @@
       "program": "${workspaceFolder}/main.py",
       "console": "integratedTerminal",
       "args": [
-        "--num_workers",
-        "0",
-        "--accumulate_grad_batches",
-        "4",
+        "--working_dir_path",
+        ".",
+        "--dataset_h5_path",
+        "data/test_dataset_clinic_eval.h5",
+        "--hospitaldict_path",
+        "data/test_clinic_eval_hospitaldict.pkl",
+        "--rseed",
+        "21",
+        "--batch_size",
+        "64",
         "--max_epochs",
         "2",
+        "--num_workers",
+        "8",
+        "--accumulate_grad_batches",
+        "8",
         "--accelerator",
-        "mps",
-        "--batch_size",
-        "4"
+        "mps"
       ]
     }
   ]
