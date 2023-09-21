@@ -7,7 +7,7 @@ import h5py
 
 working_dir = "."
 libraries_dir = working_dir + "/libraries"
-data_file = working_dir + "/data/dataset_test.h5"
+data_file = working_dir + "/data/dataset_test_2.h5"
 
 # Import custom libs
 # import sys
