@@ -7,15 +7,20 @@ from pytorch_lightning.callbacks import EarlyStopping, DeviceStatsMonitor
 # ------------------------------ Parse arguments ----------------------------- #
 parser = ArgumentParser()
 
+parser.add_argument("--model", type=str)
 parser.add_argument("--working_dir_path", type=str)
 parser.add_argument("--dataset_h5_path", type=str)
 parser.add_argument("--hospitaldict_path", type=str)
 parser.add_argument("--rseed", type=int)
+parser.add_argument("--train_ratio", type=int, default=0.7)
 parser.add_argument("--batch_size", type=int, default=90)
+parser.add_argument("--lr", type=float, default=0.0001)
+parser.add_argument("--optimizer", type=str, default="sgd")
 parser.add_argument("--max_epochs", type=int, default=1)
 parser.add_argument("--num_workers", type=int, default=4)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
 parser.add_argument("--accelerator", type=str, default="gpu")
+parser.add_argument("--precision", default=16)
 
 # Parse the user inputs and defaults (returns a argparse.Namespace)
 args = parser.parse_args()
@@ -38,7 +43,10 @@ from ResNet18LightningModule import ResNet18LightningModule
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
 
-train_subset, test_subset, split_info = splitting_strategy(dataset, args.hospitaldict_path, args.rseed, 0.7)
+train_subset, test_subset, split_info = splitting_strategy(dataset, 
+                                                           args.hospitaldict_path, 
+                                                           args.rseed, 
+                                                           args.train_ratio)
 
 train_dataset = FrameTargetDataset(train_subset)
 test_dataset = FrameTargetDataset(test_subset)
@@ -55,21 +63,37 @@ early_stop_callback = EarlyStopping(
     verbose=False,
     mode='min'
 )
-callbacks=[early_stop_callback, DeviceStatsMonitor()]
+# callbacks=[early_stop_callback, DeviceStatsMonitor()]
+callbacks = []
 #model = ViTLightningModule(train_dataset, test_dataset, 
 #                          args.batch_size, 
 #                          args.num_workers)
 
-model = ResNet18LightningModule(train_dataset, test_dataset, 
-                                args.batch_size, 
-                                args.num_workers,
-                                "sgd")
-trainer = Trainer(precision=16,
-                  accelerator=args.accelerator,
-                  accumulate_grad_batches=args.accumulate_grad_batches,
-                  max_epochs=args.max_epochs,
-                  callbacks=callbacks,
-                  devices=1)
-                  # strategy="ddp"
+hyperparameters = {
+  "train_dataset": train_dataset,
+  "test_dataset": test_dataset,
+  "batch_size": args.batch_size,
+  "lr": args.lr,
+  "optimizer": args.optimizer,
+  "num_workers": args.num_workers if args.accelerator != "mps" else 0,
+}
+# Instantiate lightning model
+if args.model == "google_vit":
+  model = ViTLightningModule(**hyperparameters)
+elif args.model == "resnet18":
+  model =  ResNet18LightningModule(**hyperparameters)
+else:
+  raise ValueError("Invalid model name. Please choose either 'google_vit' or 'resnet18'.")
+
+trainer_args = {
+    "accelerator": args.accelerator,
+    "strategy": "ddp" if args.accelerator == "gpu" else "auto",
+    "max_epochs": args.max_epochs,
+    "callbacks": callbacks,
+    "precision": args.precision,
+    "accumulate_grad_batches": args.accumulate_grad_batches
+}
+
+trainer = Trainer(**trainer_args)
 trainer.fit(model)
 trainer.test()
