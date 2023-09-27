@@ -177,18 +177,21 @@ class FrameTargetDataset(Dataset):
         # frame_tensor = frame_tensor.permute(0, 2, 1) # Move channels to the last dimension (needed after resize)
 
         return frame_tensor, target_data
+
+
     def pp_frames(self, frame_data):
         # processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
         # image_mean = processor.image_mean
         # image_std = processor.image_std
         # size = processor.size["height"]
+        
         size = (224, 224)
-        image_mean = frame_data.mean()
-        image_std = frame_data.std()
+        # image_mean = [0.485, 0.456, 0.406]
+        # image_std = [0.229, 0.224, 0.225]
 
         frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.CenterCrop(size)(frame_tensor)
-        frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        frame_tensor = transforms.Resize(size, antialias=True)(frame_tensor)
+        # frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
 
         return frame_tensor.permute(0, 2, 1)  
       
@@ -199,9 +202,8 @@ class DataAugmentation(nn.Module):
 
     def __init__(self):
         super().__init__()
-
         self.transforms = torch.nn.Sequential(
-            K.RandomRotation(degrees=(0, 20)),
+            K.RandomRotation(degrees=(-20, 20)),
             K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))
         )
 
@@ -209,4 +211,3 @@ class DataAugmentation(nn.Module):
     def forward(self, x):
         x_out = self.transforms(x)  # BxCxHxW
         return x_out
-
