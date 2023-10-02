@@ -7,10 +7,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, Subset, random_split
 
-import pytorch_lightning as pl
-from pytorch_lightning.cli import LightningCLI
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, DeviceStatsMonitor
+import lightning.pytorch as pl
+from lightning.pytorch.cli import LightningCLI
+from lightning.pytorch import Trainer
+from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor
 import torchmetrics
 from transformers import ViTForImageClassification
 import h5py

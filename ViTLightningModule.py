@@ -2,7 +2,7 @@
 from transformers import ViTForImageClassification
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 from transformers import ViTImageProcessor
 import torchvision.transforms as transforms
@@ -95,25 +95,25 @@ class ViTLightningModule(pl.LightningModule):
       
     def training_step(self, batch, batch_idx):
         loss, accuracy, f1 = self.common_step(batch, batch_idx)
-        self.log("training_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("training_accuracy", accuracy, on_epoch=True, prog_bar=True, logger=True)
-        self.log("training_f1", f1, on_epoch=True, prog_bar=True, logger=True)
+        self.log("training_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("training_accuracy", accuracy, on_epoch=True, prog_bar=True)
+        self.log("training_f1", f1, on_epoch=True, prog_bar=True)
 
         return loss
 
     def test_step(self, batch, batch_idx):
         loss, accuracy, f1 = self.common_step(batch, batch_idx)
-        self.log("test_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_accuracy", accuracy, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_f1", f1, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("test_accuracy", accuracy, on_epoch=True, prog_bar=True)
+        self.log("test_f1", f1, on_epoch=True, prog_bar=True)
 
     
-    def validation_step(self, batch, batch_idx):
-        loss, accuracy = self.common_step(batch, batch_idx)
-        print(f"val_acc: {accuracy}")
-        print(f"val_loss: {loss}")     
-        #self.log("validation_loss", loss, on_epoch=True, sync_dist=True)
-        #self.log("validation_accuracy", accuracy, on_epoch=True, sync_dist=True)
+    # def validation_step(self, batch, batch_idx):
+    #     loss, accuracy = self.common_step(batch, batch_idx)
+    #     print(f"val_acc: {accuracy}")
+    #     print(f"val_loss: {loss}")     
+    #     #self.log("validation_loss", loss, on_epoch=True, sync_dist=True)
+    #     #self.log("validation_accuracy", accuracy, on_epoch=True, sync_dist=True)
 
         return loss
 

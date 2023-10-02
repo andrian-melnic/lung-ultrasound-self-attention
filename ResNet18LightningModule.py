@@ -1,7 +1,7 @@
 from torchvision.models import resnet18, ResNet18_Weights
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 from kornia import tensor_to_image
 import torchvision
@@ -21,7 +21,7 @@ id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
 label2id = {"no": 0, "yellow": 1, "orange": 2, "red": 3}
 
 class ResNet18LightningModule(pl.LightningModule):
-    def __init__(self, train_dataset, test_dataset, batch_size, num_workers, optimizer, num_classes=4, lr=1e-3):
+    def __init__(self, train_dataset, test_dataset, batch_size, num_workers, optimizer, num_classes=4, lr=1e-3, pretrained=True):
         super(ResNet18LightningModule, self).__init__()
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
@@ -30,6 +30,13 @@ class ResNet18LightningModule(pl.LightningModule):
         self.batch_size = batch_size
         self.num_workers = num_workers
 
+        if pretrained:
+            print("\n\nUsing pretrained weights\n\n")
+            self.resnet_model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        else:
+            print("\n\nNo pretrained weights\n\n")
+            self.resnet_model = resnet18(weights=None)
+            
         self.resnet_model = resnet18(weights=ResNet18_Weights.DEFAULT)
         num_features = self.resnet_model.fc.in_features
         self.resnet_model.fc = nn.Linear(num_features, num_classes)
@@ -94,22 +101,22 @@ class ResNet18LightningModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         loss, accuracy, f1 = self.common_step(batch, batch_idx)
-        self.log("training_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("training_accuracy", accuracy, on_epoch=True, prog_bar=True, logger=True)
-        self.log("training_f1", f1, on_epoch=True, prog_bar=True, logger=True)
+        self.log("training_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("training_accuracy", accuracy, on_epoch=True, prog_bar=True)
+        self.log("training_f1", f1, on_epoch=True, prog_bar=True)
 
         return loss
 
     def test_step(self, batch, batch_idx):
         loss, accuracy, f1 = self.common_step(batch, batch_idx)
-        self.log("test_loss", loss, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_accuracy", accuracy, on_epoch=True, prog_bar=True, logger=True)
-        self.log("test_f1", f1, on_epoch=True, prog_bar=True, logger=True)
+        self.log("test_loss", loss, on_epoch=True, prog_bar=True)
+        self.log("test_accuracy", accuracy, on_epoch=True, prog_bar=True)
+        self.log("test_f1", f1, on_epoch=True, prog_bar=True)
 
         return loss
     def configure_optimizers(self):
         if self.optimizer_name == "adam":
-            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0.0001)
         elif self.optimizer_name == "sgd":
             self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr)
         else:

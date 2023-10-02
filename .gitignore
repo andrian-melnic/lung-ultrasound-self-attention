@@ -10,6 +10,7 @@ frame_info.pkl
 
 # Distribution / packaging
 .Python
+tb_logs/
 build/
 develop-eggs/
 data/
