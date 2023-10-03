@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from lightning.pytorch.loggers import TensorBoardLogger
 import warnings
+import os
+import glob
 import lightning as pl
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor
@@ -15,6 +17,7 @@ parser.add_argument("--model", type=str)
 parser.add_argument("--working_dir_path", type=str)
 parser.add_argument("--dataset_h5_path", type=str)
 parser.add_argument("--hospitaldict_path", type=str)
+parser.add_argument("--checkpoint_path", type=str)
 parser.add_argument("--rseed", type=int)
 parser.add_argument("--train_ratio", type=int, default=0.7)
 parser.add_argument("--batch_size", type=int, default=90)
@@ -72,6 +75,9 @@ print(f"Test size: {len(test_dataset)}")
 # ---------------------------------------------------------------------------- #
 
 # ------------------- Model hyperparameters & instantiation ------------------ #
+
+print("\n\nModel configuration...")
+print('=' * 80)
 hyperparameters = {
   "train_dataset": train_dataset,
   "test_dataset": test_dataset,
@@ -102,6 +108,9 @@ print(table)
 
 
 # --------------------------- Trainer configuration -------------------------- #
+
+print("\n\nTrainer configuration...")
+print('=' * 80)
 # Callbacks
 early_stop_callback = EarlyStopping(
     monitor='validation_loss',
@@ -113,10 +122,13 @@ early_stop_callback = EarlyStopping(
 # callbacks=[early_stop_callback, DeviceStatsMonitor()]
 callbacks = []
 
-# Logger onfiguration
+# Logger configuration
 name_trained = "pretrained_" if args.pretrained==True else ""
 model_name = f"{name_trained}resnet18_{args.optimizer}_{args.lr}_{args.batch_size}"
 logger = TensorBoardLogger("tb_logs", name=model_name)
+
+# Checkpoints directory
+checkpoint_dir = f"{working_dir}/checkpoints/{model_name}"
 
 # Trainer args
 trainer_args = {
@@ -135,18 +147,64 @@ for key, value in trainer_args.items():
         table_data.append([key, value])
 
 table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
-print("\n\n" + table + "\n\n")
-
+print("\n\n" + table)
+print(f"Model checkpoints directory is {checkpoint_dir}")
+print("\n\n")
 # Trainer 
-trainer = Trainer(**trainer_args)
+trainer = Trainer(**trainer_args,
+                  default_root_dir = checkpoint_dir)
 
 # Print the information of each callback
 print("\n\n" + "-" * 20)
 print("Trainer Callbacks:")
-print("-" * 20)
+print("-" * 20 + "\n\n")
 for callback in trainer.callbacks:
     print(f"- {type(callback).__name__}")
-    
+
 # ---------------------------- Model fit and test ---------------------------- #
-trainer.fit(model)
+
+print("\n\nTRAINING MODEL...")
+print('=' * 80 + "\n")
+
+# Checkpointing
+# Check if checkpoint path is provided
+if args.checkpoint_path:
+  
+    checkpoint_path = args.checkpoint_path
+    print("Checkpoint mode activated...\n")
+    
+    if (checkpoint_path == "best"):
+      print("Loading BEST checkpoint...\n")
+      
+    elif (checkpoint_path == "latest"):
+      print("Loading LATEST checkpoint...\n")
+      # Find all checkpoint files
+      checkpoint_files = glob.glob(checkpoint_dir)
+      
+      if len(checkpoint_files) > 0:
+        # Sort the checkpoint files by modification time in descending order
+        checkpoint_files.sort(key=os.path.getmtime, reverse=True)
+        # Load the latest checkpoint file
+        print(f"Latest checkpoint is {checkpoint_files[0]}")
+        checkpoint_path = checkpoint_files[0]
+        
+      else:
+        print("No checkpoint found. Exiting...\n\n")
+        exit()
+    else:
+      # Check if checkpoint file exists
+      if not os.path.isfile(checkpoint_path):
+          print(f"Checkpoint file '{checkpoint_path}' does not exist. Exiting...")
+          exit()
+    
+    print(f"Loading checkpoint from PATH: '{checkpoint_path}'...\n")
+    trainer.fit(model, ckpt_path=checkpoint_path)
+else:
+    # Instantiate trainer without checkpoint
+    print("Instantiating trainer without checkpoint...")
+    trainer.fit(model)
+
+
+print("\n\nTESTING MODEL...")
+print('=' * 80 + "\n")
 trainer.test()

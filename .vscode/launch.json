@@ -22,7 +22,8 @@
         "--accumulate_grad_batches", "4",
         "--accelerator", "mps",
         "--precision", "16-mixed",
-         "--disable_warnings", "True"
+        "--disable_warnings", "True",
+        "--checkpoint_path", "latest"
       ]
     },
     {
