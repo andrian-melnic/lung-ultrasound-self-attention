@@ -1,10 +1,10 @@
 from argparse import ArgumentParser
+from lightning.pytorch.loggers import TensorBoardLogger
+import warnings
 import lightning as pl
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor
-from lightning.pytorch.loggers import TensorBoardLogger
 from tabulate import tabulate
-import warnings
 
 
 
@@ -49,17 +49,16 @@ libraries_dir = working_dir + "/libraries"
 # ---------------------------- Import custom libs ---------------------------- #
 import sys
 sys.path.append(working_dir)
-from data_setup import HDF5Dataset, splitting_strategy, FrameTargetDataset
+from data_setup import HDF5Dataset, FrameTargetDataset
 from ViTLightningModule import ViTLightningModule
 from ResNet18LightningModule import ResNet18LightningModule
 
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
 
-train_subset, test_subset, split_info = splitting_strategy(dataset, 
-                                                           args.hospitaldict_path, 
-                                                           args.rseed, 
-                                                           args.train_ratio)
+train_subset, test_subset, split_info = dataset.split_dataset(args.hospitaldict_path, 
+                                                      args.rseed, 
+                                                      args.train_ratio)
 
 train_dataset = FrameTargetDataset(train_subset)
 test_dataset = FrameTargetDataset(test_subset)
