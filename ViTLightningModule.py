@@ -25,7 +25,7 @@ id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
 label2id = {"no": 0, "yellow": 1, "orange": 2, "red": 3}
 
 class ViTLightningModule(pl.LightningModule):
-    def __init__(self, train_dataset, test_dataset, batch_size, num_workers, optimizer, num_classes=4, lr=1e-3):
+    def __init__(self, train_dataset, test_dataset, batch_size, num_workers, optimizer, num_classes=4, lr=1e-3, pretrained=True):
         super(ViTLightningModule, self).__init__()
         self.vit = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k',
                                                               num_labels=4,
@@ -130,7 +130,6 @@ class ViTLightningModule(pl.LightningModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size=self.batch_size,
-                          num_workers=self.num_workers,
                           pin_memory=True,
                           collate_fn=collate_fn)
 
