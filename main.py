@@ -3,10 +3,12 @@ from lightning.pytorch.loggers import TensorBoardLogger
 import warnings
 import os
 import glob
+import pickle
 import lightning as pl
 from lightning.pytorch import Trainer
-from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor
+from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint
 from tabulate import tabulate
+from torch.utils.data import Subset
 
 
 
@@ -29,16 +31,17 @@ parser.add_argument("--num_workers", type=int, default=4)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
 parser.add_argument("--accelerator", type=str, default="gpu")
 parser.add_argument("--precision", default=16)
-parser.add_argument("--disable_warnings", type=bool, default=False)
+parser.add_argument("--disable_warnings", default=False)
 
 # Parse the user inputs and defaults (returns a argparse.Namespace)
 
 print("\n" + "-"*80 + "\n")
 args = parser.parse_args()
 pl.seed_everything(args.rseed)
+print("\n" + "-"*80 + "\n")
+
 
 # ------------------------------ Warnings config ----------------------------- #
-print(args.disable_warnings)
 if args.disable_warnings == True: 
     print("Warnings are DISABLED!\n\n")
     warnings.filterwarnings("ignore")
@@ -59,10 +62,31 @@ from ResNet18LightningModule import ResNet18LightningModule
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
 
-train_subset, test_subset, split_info = dataset.split_dataset(args.hospitaldict_path, 
-                                                      args.rseed, 
-                                                      args.train_ratio)
+train_indices_path = os.path.dirname(args.dataset_h5_path) + "/train_indices.pkl"
+test_indices_path = os.path.dirname(args.dataset_h5_path) + "/test_indices.pkl"
 
+
+if os.path.exists(train_indices_path) and os.path.exists(test_indices_path):
+    print("Loading pickled indices")
+    with open(train_indices_path, 'rb') as train_pickle_file:
+        train_indices = pickle.load(train_pickle_file)
+    with open(test_indices_path, 'rb') as test_pickle_file:
+        test_indices = pickle.load(test_pickle_file)
+    # Create training and test subsets
+    train_subset = Subset(dataset, train_indices)
+    test_subset = Subset(dataset, test_indices)  
+else:
+    train_subset, test_subset, split_info, train_indices, test_indices = dataset.split_dataset(args.hospitaldict_path, 
+                                                              args.rseed, 
+                                                              args.train_ratio)
+    print("Pickling sets...")
+    
+    # Pickle the indices
+    with open(train_indices_path, 'wb') as train_pickle_file:
+        pickle.dump(train_indices, train_pickle_file)
+    with open(test_indices_path, 'wb') as test_pickle_file:
+        pickle.dump(test_indices, test_pickle_file)
+        
 train_dataset = FrameTargetDataset(train_subset)
 test_dataset = FrameTargetDataset(test_subset)
 
@@ -124,7 +148,7 @@ callbacks = []
 
 # Logger configuration
 name_trained = "pretrained_" if args.pretrained==True else ""
-model_name = f"{name_trained}resnet18_{args.optimizer}_{args.lr}_{args.batch_size}"
+model_name = f"{name_trained}resnet18/{args.optimizer}/{args.lr}_{args.batch_size}"
 logger = TensorBoardLogger("tb_logs", name=model_name)
 
 # Checkpoints directory
@@ -167,6 +191,13 @@ print("\n\nTRAINING MODEL...")
 print('=' * 80 + "\n")
 
 # Checkpointing
+checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
+                                      save_top_k=3,
+                                      mode="min",
+                                      monitor="training_loss",
+                                      save_last=True,
+                                      verbose=True)
+callbacks.append(checkpoint_callback)
 # Check if checkpoint path is provided
 if args.checkpoint_path:
   
@@ -175,22 +206,10 @@ if args.checkpoint_path:
     
     if (checkpoint_path == "best"):
       print("Loading BEST checkpoint...\n")
-      
-    elif (checkpoint_path == "latest"):
-      print("Loading LATEST checkpoint...\n")
-      # Find all checkpoint files
-      checkpoint_files = glob.glob(checkpoint_dir)
-      
-      if len(checkpoint_files) > 0:
-        # Sort the checkpoint files by modification time in descending order
-        checkpoint_files.sort(key=os.path.getmtime, reverse=True)
-        # Load the latest checkpoint file
-        print(f"Latest checkpoint is {checkpoint_files[0]}")
-        checkpoint_path = checkpoint_files[0]
-        
-      else:
-        print("No checkpoint found. Exiting...\n\n")
-        exit()
+
+    if (checkpoint_path == "last"):
+      print("Loading LAST checkpoint...\n")
+
     else:
       # Check if checkpoint file exists
       if not os.path.isfile(checkpoint_path):

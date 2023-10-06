@@ -102,8 +102,6 @@ class HDF5Dataset(Dataset):
           FileNotFoundError: If the pickle file does not exist.
 
       """
-      # iteration seed
-      random.seed(rseed)
 
       # Check if the pickle file exists
       if os.path.exists(pkl_file):
@@ -171,7 +169,7 @@ class HDF5Dataset(Dataset):
           'total_test_frames': len(test_indices)
       }
 
-      return train_dataset_subset, test_dataset_subset, split_info
+      return train_dataset_subset, test_dataset_subset, split_info, train_indices, test_indices
     
     
     def __len__(self):
