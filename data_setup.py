@@ -212,7 +212,7 @@ class HDF5Dataset(Dataset):
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset):
+    def __init__(self, hdf5_dataset, transform=None):
         """
         Initialize the dataset.
 
@@ -220,7 +220,8 @@ class FrameTargetDataset(Dataset):
             hdf5_dataset (h5py.Dataset): The HDF5 dataset.
         """
         self.hdf5_dataset = hdf5_dataset
-        # self.resize_size = (100, 150)
+        self.transform = transform
+        self.resize_size = (224, 224)
 
     def __len__(self):
         """
@@ -243,15 +244,24 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
-        frame_tensor = self.pp_frames(frame_data)
+        # frame_tensor = self.pp_frames(frame_data)
+        frame_tensor = transforms.ToTensor()(frame_data)
+        frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
+        if self.transform is not None:
+            frame_tensor = transforms.CenterCrop(self.transform.size["height"])(frame_tensor)
+            frame_tensor = transforms.Normalize(mean=self.transform.image_mean, std=self.transform.image_std)(frame_tensor)
+        frame_tensor = frame_tensor.permute(0, 1, 2) # Move channels to the last dimension (needed after resize)
+            
         # Target data to integer scores
-        target_data = torch.tensor(sum(target_data))
-        # Apply Resize transformation
-        # frame_tensor = transforms.ToTensor()(frame_data)
-        # frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
-        # frame_tensor = frame_tensor.permute(0, 2, 1) # Move channels to the last dimension (needed after resize)
+        # target_data = torch.tensor(sum(target_data))
+        target_data = int(target_data[()])
+
+        
 
         return frame_tensor, target_data
+    
+    def set_transform(self, transform):
+        self.transform = transform
 
 
     def pp_frames(self, frame_data):
@@ -264,18 +274,14 @@ class FrameTargetDataset(Dataset):
         Returns:
             torch.Tensor: The preprocessed frame tensor.
         """
-        # processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224-in21k")
-        # image_mean = processor.image_mean
-        # image_std = processor.image_std
-        # size = processor.size["height"]
 
         size = (224, 224)
-        # image_mean = [0.485, 0.456, 0.406]
-        # image_std = [0.229, 0.224, 0.225]
+        image_mean = [0.485, 0.456, 0.406]
+        image_std = [0.229, 0.224, 0.225]
 
         frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(size, antialias=True)(frame_tensor)
-        # frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        frame_tensor = transforms.Resize(size)(frame_tensor)
+        frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
 
         return frame_tensor.permute(0, 2, 1)
       
