@@ -58,6 +58,8 @@ sys.path.append(working_dir)
 from data_setup import HDF5Dataset, FrameTargetDataset
 from ViTLightningModule import ViTLightningModule
 from ResNet18LightningModule import ResNet18LightningModule
+from BEiTLightningModule import BEiTLightningModule
+
 
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
@@ -116,6 +118,8 @@ if args.model == "google_vit":
   model = ViTLightningModule(**hyperparameters)
 elif args.model == "resnet18":
   model =  ResNet18LightningModule(**hyperparameters)
+elif args.model == "beit": 
+  model =  BEiTLightningModule(**hyperparameters)
 else:
   raise ValueError("Invalid model name. Please choose either 'google_vit' or 'resnet18'.")
 
@@ -148,7 +152,7 @@ callbacks = []
 
 # Logger configuration
 name_trained = "pretrained_" if args.pretrained==True else ""
-model_name = f"{name_trained}resnet18/{args.optimizer}/{args.lr}_{args.batch_size}"
+model_name = f"{name_trained}{args.model}/{args.optimizer}/{args.lr}_{args.batch_size}"
 logger = TensorBoardLogger("tb_logs", name=model_name)
 
 # Checkpoints directory
