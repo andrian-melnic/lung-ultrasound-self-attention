@@ -9,6 +9,7 @@ from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint
 from tabulate import tabulate
 from torch.utils.data import Subset
+from lightning.pytorch.tuner import Tuner
 
 
 
@@ -21,7 +22,7 @@ parser.add_argument("--dataset_h5_path", type=str)
 parser.add_argument("--hospitaldict_path", type=str)
 parser.add_argument("--checkpoint_path", type=str)
 parser.add_argument("--rseed", type=int)
-parser.add_argument("--train_ratio", type=int, default=0.7)
+parser.add_argument("--train_ratio", type=float, default=0.7)
 parser.add_argument("--batch_size", type=int, default=90)
 parser.add_argument("--lr", type=float, default=0.0001)
 parser.add_argument("--optimizer", type=str, default="sgd")
@@ -64,8 +65,8 @@ from BEiTLightningModule import BEiTLightningModule
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
 
-train_indices_path = os.path.dirname(args.dataset_h5_path) + "/train_indices.pkl"
-test_indices_path = os.path.dirname(args.dataset_h5_path) + "/test_indices.pkl"
+train_indices_path = os.path.dirname(args.dataset_h5_path) + f"/train_indices_{args.train_ratio}.pkl"
+test_indices_path = os.path.dirname(args.dataset_h5_path) + f"/test_indices_{args.train_ratio}.pkl"
 
 
 if os.path.exists(train_indices_path) and os.path.exists(test_indices_path):
@@ -181,7 +182,9 @@ print("\n\n")
 # Trainer 
 trainer = Trainer(**trainer_args,
                   default_root_dir = checkpoint_dir)
-
+# Create a Tuner
+tuner = Tuner(trainer)
+tuner.lr_find(model)
 # Print the information of each callback
 print("\n\n" + "-" * 20)
 print("Trainer Callbacks:")
