@@ -57,10 +57,9 @@ libraries_dir = working_dir + "/libraries"
 import sys
 sys.path.append(working_dir)
 from data_setup import HDF5Dataset, FrameTargetDataset
-from ViTLightningModule import ViTLightningModule
-from ResNet18LightningModule import ResNet18LightningModule
-from BEiTLightningModule import BEiTLightningModule
-
+from lightning_modules.ViTLightningModule import ViTLightningModule
+from lightning_modules.ResNet18LightningModule import ResNet18LightningModule
+from lightning_modules.BEiTLightningModule import BEiTLightningModule
 
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
