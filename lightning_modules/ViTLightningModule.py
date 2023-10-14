@@ -6,13 +6,12 @@ import lightning.pytorch as pl
 import torch
 import torchvision
 from transformers import ViTImageProcessor
-import torchvision.transforms as transforms
 from torchmetrics.classification import MulticlassF1Score
-import torchmetrics.functional as metrics
 from kornia import tensor_to_image
 import matplotlib.pyplot as plt
 from data_setup import DataAugmentation
-from data_setup import FrameTargetDataset
+from transformers import ViTConfig
+
 
 def collate_fn(examples):
     frames = torch.stack([example[0] for example in examples])  # Extract the preprocessed frames
@@ -23,14 +22,28 @@ id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
 label2id = {"no": 0, "yellow": 1, "orange": 2, "red": 3}
 
 class ViTLightningModule(pl.LightningModule):
-    def __init__(self, train_dataset, test_dataset, batch_size, num_workers, optimizer, num_classes=4, lr=1e-3, pretrained=True):
+    def __init__(self, 
+                 train_dataset,
+                 test_dataset,
+                 batch_size,
+                 num_workers,
+                 optimizer,
+                 num_classes=4,
+                 lr=1e-3,
+                 pretrained=True,
+                 configuration=None):
         
         super(ViTLightningModule, self).__init__()
         
-        self.vit = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k',
-                                                              num_labels=4,
-                                                              id2label=id2label,
-                                                              label2id=label2id)
+        if pretrained == True:
+            self.vit = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224-in21k',
+                                                                  num_labels=4,
+                                                                  id2label=id2label,
+                                                                  label2id=label2id)
+        else:
+            self.config = ViTConfig(**configuration)
+            self.vit = ViTForImageClassification(config=self.config)
+        
         self.preprocess = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224-in21k', do_rescale=False)
         self.transform = DataAugmentation()
         
@@ -52,8 +65,8 @@ class ViTLightningModule(pl.LightningModule):
     def on_after_batch_transfer(self, batch, dataloader_idx):
         pixel_values, labels = batch
         if self.trainer.training:
-            x = self.transform(pixel_values)  # => we perform GPU/Batched data augmentation
-        return x, labels
+            pixel_values = self.transform(pixel_values)  # => we perform GPU/Batched data augmentation
+        return pixel_values, labels
       
       
     def forward(self, pixel_values):
@@ -85,7 +98,7 @@ class ViTLightningModule(pl.LightningModule):
 
         return loss
 
-    def test_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx):
         loss, accuracy, f1 = self.common_step(batch, batch_idx)
         self.log("test_loss", loss, on_epoch=True, prog_bar=True)
         self.log("test_accuracy", accuracy, on_epoch=True, prog_bar=True)
@@ -110,7 +123,7 @@ class ViTLightningModule(pl.LightningModule):
                           pin_memory=True,
                           collate_fn=collate_fn, shuffle=False)
 
-    def test_dataloader(self):
+    def val_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size=self.batch_size,
                           pin_memory=True,
@@ -137,6 +150,3 @@ class ViTLightningModule(pl.LightningModule):
         plt.figure(figsize=win_size)
         plt.imshow(_to_vis(imgs_aug))
         plt.title("Augmented Images")
-
-
-      
