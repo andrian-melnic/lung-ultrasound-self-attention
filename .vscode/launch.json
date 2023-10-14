@@ -3,7 +3,7 @@
   "configurations": [
 
     {
-      "name": "resnet18",
+      "name": "full_resnet18",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/main.py",
@@ -14,15 +14,40 @@
         "--dataset_h5_path", "data/iclus/dataset.h5",
         "--hospitaldict_path", "data/iclus/hospitals-patients-dict.pkl",
         "--rseed", "21",
-        "--batch_size", "64",
+        "--batch_size", "4",
+        "--lr","0.0001",
+        "--optimizer", "sgd",
+        "--max_epochs", "20",
+        "--num_workers", "8",
+        "--accumulate_grad_batches", "8",
+        "--accelerator", "mps",
+        "--precision", "16",
+        "--disable_warnings", "True",
+        "--checkpoint_path", "last"
+      ]
+    },
+    {
+      "name": "eval_resnet18",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "args": [
+        "--model", "resnet18",
+        "--working_dir_path", ".",
+        "--dataset_h5_path", "data/clinical_eval/dataset.h5",
+        "--hospitaldict_path", "data/clinical_eval/hospitals-patients-dict.pkl",
+        "--rseed", "21",
+        "--batch_size", "4",
         "--lr","0.0001",
         "--optimizer", "sgd",
         "--max_epochs", "20",
         "--num_workers", "8",
         "--accumulate_grad_batches", "4",
         "--accelerator", "mps",
-        "--precision", "16-mixed",
-        "--disable_warnings", "True"
+        "--precision", "16",
+        "--disable_warnings", "True",
+        // "--checkpoint_path", "last"
       ]
     },
     {
@@ -36,15 +61,17 @@
         "--working_dir_path", ".",
         "--dataset_h5_path", "data/iclus/dataset.h5",
         "--hospitaldict_path", "data/iclus/hospitals-patients-dict.pkl",
+        "--train_ratio", "0.7",
         "--rseed", "21",
-        "--batch_size", "32",
+        "--batch_size", "4",
         "--lr","0.0001",
-        "--optimizer", "adam",
+        "--optimizer", "sgd",
         "--max_epochs", "10",
         "--num_workers", "8",
         "--accumulate_grad_batches", "8",
         "--accelerator", "mps",
-        "--precision", "16-mixed"
+        "--precision", "32",
+        "--pretrained", "False"
       ]
     },
     {
@@ -56,8 +83,8 @@
       "args": [
         "--model", "google_vit",
         "--working_dir_path", ".",
-        "--dataset_h5_path", "data/clinical_eval/test_dataset_clinic_eval.h5",
-        "--hospitaldict_path", "data/clinical_eval/test_clinic_eval_hospitaldict.pkl",
+        "--dataset_h5_path", "data/clinical_eval/dataset.h5",
+        "--hospitaldict_path", "data/clinical_eval/hospitals-patients-dict.pkl",
         "--rseed", "21",
         "--batch_size", "4",
         "--lr","0.0001",
