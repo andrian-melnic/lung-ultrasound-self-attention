@@ -4,7 +4,7 @@ import h5py
 from tqdm import tqdm
 import pickle
 import random
-import torchvision.transforms as transforms
+from torchvision.transforms import v2
 from collections import defaultdict
 import torch
 import torch.nn as nn
@@ -244,13 +244,12 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
-        # frame_tensor = self.pp_frames(frame_data)
-        frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
-        if self.transform is not None:
-            frame_tensor = transforms.CenterCrop(self.transform.size["height"])(frame_tensor)
-            frame_tensor = transforms.Normalize(mean=self.transform.image_mean, std=self.transform.image_std)(frame_tensor)
-        frame_tensor = frame_tensor.permute(0, 1, 2) # Move channels to the last dimension (needed after resize)
+        frame_tensor = self.pp_frames(frame_data)
+        # frame_tensor = transforms.ToTensor()(frame_data)
+        # frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
+        # if self.transform is not None:
+        #     frame_tensor = transforms.Normalize(mean=self.transform.image_mean, std=self.transform.image_std)(frame_tensor)
+        # frame_tensor = frame_tensor.permute(0, 1, 2) # Move channels to the last dimension (needed after resize)
             
         # Target data to integer scores
         # target_data = torch.tensor(sum(target_data))
@@ -279,11 +278,11 @@ class FrameTargetDataset(Dataset):
         image_mean = [0.485, 0.456, 0.406]
         image_std = [0.229, 0.224, 0.225]
 
-        frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(size)(frame_tensor)
-        frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        frame_tensor = v2.ToTensor()(frame_data)
+        frame_tensor = v2.Resize(size)(frame_tensor)
+        frame_tensor = v2.Normalize(mean=image_mean, std=image_std)(frame_tensor)
 
-        return frame_tensor.permute(0, 2, 1)
+        return frame_tensor.permute(0, 1, 2)
       
       
 # ---------------------------------------------------------------------------- #
@@ -295,9 +294,15 @@ class DataAugmentation(nn.Module):
 
     def __init__(self):
         super().__init__()
+        # self.transforms = torch.nn.Sequential(
+        #     K.RandomRotation(degrees=(-20, 20)),  # random rotation between -20 to 20 degrees
+        #     K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
+        # )
         self.transforms = torch.nn.Sequential(
-            K.RandomRotation(degrees=(-20, 20)),  # random rotation between -20 to 20 degrees
-            K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
+            K.RandomRotation(degrees=(-25, 25)),  # random rotation between -20 to 20 degrees
+            K.RandomElasticTransform(),
+            K.RandomContrast(contrast = (0.5, 2.), p = 1.),
+            K.RandomGaussianBlur((3, 3), (0.15, 3.0), p=1.)
         )
 
     @torch.no_grad()  # disable gradients for efficiency
