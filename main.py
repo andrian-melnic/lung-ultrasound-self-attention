@@ -10,7 +10,7 @@ from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, Model
 from tabulate import tabulate
 from torch.utils.data import Subset
 from lightning.pytorch.tuner import Tuner
-
+PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 
 
 
 # ------------------------------ Parse arguments ----------------------------- #
@@ -26,13 +26,13 @@ parser.add_argument("--train_ratio", type=float, default=0.7)
 parser.add_argument("--batch_size", type=int, default=90)
 parser.add_argument("--lr", type=float, default=0.0001)
 parser.add_argument("--optimizer", type=str, default="sgd")
-parser.add_argument("--pretrained", type=str, default=True)
 parser.add_argument("--max_epochs", type=int, default=1)
 parser.add_argument("--num_workers", type=int, default=4)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
 parser.add_argument("--accelerator", type=str, default="gpu")
-parser.add_argument("--precision", default=16)
-parser.add_argument("--disable_warnings", default=False)
+parser.add_argument("--precision", default=32)
+parser.add_argument("--disable_warnings", default=True)
+parser.add_argument("--pretrained", default=True)
 
 # Parse the user inputs and defaults (returns a argparse.Namespace)
 
@@ -88,7 +88,11 @@ else:
         pickle.dump(train_indices, train_pickle_file)
     with open(test_indices_path, 'wb') as test_pickle_file:
         pickle.dump(test_indices, test_pickle_file)
-        
+
+# test_subset_size = args.train_ratio/2
+# test_subset = Subset(test_subset, range(int(test_subset_size * len(test_indices))))
+
+
 train_dataset = FrameTargetDataset(train_subset)
 test_dataset = FrameTargetDataset(test_subset)
 
@@ -104,6 +108,12 @@ print(f"Test size: {len(test_dataset)}")
 
 print("\n\nModel configuration...")
 print('=' * 80)
+
+configuration = {
+    "num_labels": 4,
+    "num_attention_heads": 4,
+    "num_hidden_layers":4
+}
 hyperparameters = {
   "train_dataset": train_dataset,
   "test_dataset": test_dataset,
@@ -112,6 +122,7 @@ hyperparameters = {
   "optimizer": args.optimizer,
   "num_workers": args.num_workers if args.accelerator != "mps" else 0,
   "pretrained": args.pretrained
+#   "configuration": configuration
 }
 # Instantiate lightning model
 if args.model == "google_vit":
@@ -134,12 +145,14 @@ for key, value in hyperparameters.items():
 table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
 print(table)
 
+# print(f"\n\n{model.config}\n")
 
 # --------------------------- Trainer configuration -------------------------- #
 
 print("\n\nTrainer configuration...")
 print('=' * 80)
 # Callbacks
+# -EarlyStopping
 early_stop_callback = EarlyStopping(
     monitor='validation_loss',
     patience=3,
@@ -147,16 +160,30 @@ early_stop_callback = EarlyStopping(
     verbose=False,
     mode='min'
 )
-# callbacks=[early_stop_callback, DeviceStatsMonitor()]
-callbacks = []
 
-# Logger configuration
+# -Logger configuration
 name_trained = "pretrained_" if args.pretrained==True else ""
 model_name = f"{name_trained}{args.model}/{args.optimizer}/{args.lr}_{args.batch_size}"
 logger = TensorBoardLogger("tb_logs", name=model_name)
 
-# Checkpoints directory
+# -Checkpointing
+#   Checkpoints directory
 checkpoint_dir = f"{working_dir}/checkpoints/{model_name}"
+checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
+                                      save_top_k=3,
+                                      mode="min",
+                                      monitor="training_loss",
+                                      save_last=True,
+                                      verbose=True)
+
+callbacks=[early_stop_callback, 
+           DeviceStatsMonitor(), 
+           checkpoint_callback]
+
+
+
+print("\n\nTRAINING MODEL...")
+print('=' * 80 + "\n")
 
 # Trainer args
 trainer_args = {
@@ -178,32 +205,21 @@ table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
 print("\n\n" + table)
 print(f"Model checkpoints directory is {checkpoint_dir}")
 print("\n\n")
+
 # Trainer 
 trainer = Trainer(**trainer_args,
                   default_root_dir = checkpoint_dir)
 # Create a Tuner
-tuner = Tuner(trainer)
-tuner.lr_find(model)
+# tuner = Tuner(trainer)
+# tuner.lr_find(model)
 # Print the information of each callback
 print("\n\n" + "-" * 20)
 print("Trainer Callbacks:")
 print("-" * 20 + "\n\n")
 for callback in trainer.callbacks:
     print(f"- {type(callback).__name__}")
-
+    
 # ---------------------------- Model fit and test ---------------------------- #
-
-print("\n\nTRAINING MODEL...")
-print('=' * 80 + "\n")
-
-# Checkpointing
-checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
-                                      save_top_k=3,
-                                      mode="min",
-                                      monitor="training_loss",
-                                      save_last=True,
-                                      verbose=True)
-callbacks.append(checkpoint_callback)
 # Check if checkpoint path is provided
 if args.checkpoint_path:
   
