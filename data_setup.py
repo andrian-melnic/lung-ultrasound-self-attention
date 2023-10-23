@@ -221,7 +221,7 @@ class FrameTargetDataset(Dataset):
         """
         self.hdf5_dataset = hdf5_dataset
         self.transform = transform
-        self.resize_size = (224, 224)
+        self.resize_size = (256, 256)
 
     def __len__(self):
         """
@@ -244,12 +244,14 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
-        frame_tensor = self.pp_frames(frame_data)
-        # frame_tensor = transforms.ToTensor()(frame_data)
-        # frame_tensor = transforms.Resize(self.resize_size, antialias=True)(frame_tensor)
-        # if self.transform is not None:
-        #     frame_tensor = transforms.Normalize(mean=self.transform.image_mean, std=self.transform.image_std)(frame_tensor)
-        # frame_tensor = frame_tensor.permute(0, 1, 2) # Move channels to the last dimension (needed after resize)
+        # frame_tensor = self.pp_frames(frame_data)
+        image_mean = [0.485, 0.456, 0.406]
+        image_std = [0.229, 0.224, 0.225]
+
+        frame_tensor = v2.ToTensor()(frame_data)
+        frame_tensor = v2.Resize(self.resize_size)(frame_tensor)
+        # frame_tensor = v2.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        frame_tensor = frame_tensor.permute(0, 1, 2)
             
         # Target data to integer scores
         # target_data = torch.tensor(sum(target_data))
@@ -263,26 +265,26 @@ class FrameTargetDataset(Dataset):
         self.transform = transform
 
 
-    def pp_frames(self, frame_data):
-        """
-        Preprocess the frame data.
+    # def pp_frames(self, frame_data):
+    #     """
+    #     Preprocess the frame data.
 
-        Args:
-            frame_data: The frame data.
+    #     Args:
+    #         frame_data: The frame data.
 
-        Returns:
-            torch.Tensor: The preprocessed frame tensor.
-        """
+    #     Returns:
+    #         torch.Tensor: The preprocessed frame tensor.
+    #     """
 
-        size = (224, 224)
-        image_mean = [0.485, 0.456, 0.406]
-        image_std = [0.229, 0.224, 0.225]
+    #     size = (224, 224)
+    #     image_mean = [0.485, 0.456, 0.406]
+    #     image_std = [0.229, 0.224, 0.225]
 
-        frame_tensor = v2.ToTensor()(frame_data)
-        frame_tensor = v2.Resize(size)(frame_tensor)
-        frame_tensor = v2.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+    #     frame_tensor = v2.ToTensor()(frame_data)
+    #     frame_tensor = v2.Resize(size)(frame_tensor)
+    #     frame_tensor = v2.Normalize(mean=image_mean, std=image_std)(frame_tensor)
 
-        return frame_tensor.permute(0, 1, 2)
+    #     return 
       
       
 # ---------------------------------------------------------------------------- #
@@ -299,10 +301,10 @@ class DataAugmentation(nn.Module):
         #     K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
         # )
         self.transforms = torch.nn.Sequential(
-            K.RandomRotation(degrees=(-25, 25)),  # random rotation between -20 to 20 degrees
-            K.RandomElasticTransform(),
-            K.RandomContrast(contrast = (0.5, 2.), p = 1.),
-            K.RandomGaussianBlur((3, 3), (0.15, 3.0), p=1.)
+            K.RandomAffine(degrees=(-15, 15), scale=(1.1, 1.25)),
+            K.RandomElasticTransform(p=0.5),
+            K.RandomContrast(contrast=(0.8, 1.2), p=0.50),
+            K.RandomGaussianBlur((3, 3), (0.5, 1.5), p=0.15)
         )
 
     @torch.no_grad()  # disable gradients for efficiency
