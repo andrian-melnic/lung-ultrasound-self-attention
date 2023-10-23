@@ -5,18 +5,20 @@ import os
 import glob
 import pickle
 import lightning as pl
+import torch
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint
 from tabulate import tabulate
 from torch.utils.data import Subset
 from lightning.pytorch.tuner import Tuner
-PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 
 
 
 # ------------------------------ Parse arguments ----------------------------- #
 parser = ArgumentParser()
-
-parser.add_argument("--model", type=str)
+allowed_models = ["google_vit", "resnet18", "beit", 'timm_bot']
+allowed_modes = ["train", "test", "train_test"]
+parser.add_argument("--model", type=str, choices=allowed_models)
+parser.add_argument("--mode", type=str, choices=allowed_modes)
 parser.add_argument("--working_dir_path", type=str)
 parser.add_argument("--dataset_h5_path", type=str)
 parser.add_argument("--hospitaldict_path", type=str)
@@ -24,15 +26,19 @@ parser.add_argument("--checkpoint_path", type=str)
 parser.add_argument("--rseed", type=int)
 parser.add_argument("--train_ratio", type=float, default=0.7)
 parser.add_argument("--batch_size", type=int, default=90)
-parser.add_argument("--lr", type=float, default=0.0001)
 parser.add_argument("--optimizer", type=str, default="sgd")
+parser.add_argument("--lr", type=float, default=0.0001)
+parser.add_argument("--weight_decay", type=float, default=0.001)
+parser.add_argument("--momentum", type=float, default=0.001)
 parser.add_argument("--max_epochs", type=int, default=1)
 parser.add_argument("--num_workers", type=int, default=4)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
 parser.add_argument("--accelerator", type=str, default="gpu")
 parser.add_argument("--precision", default=32)
-parser.add_argument("--disable_warnings", default=True)
-parser.add_argument("--pretrained", default=True)
+parser.add_argument("--disable_warnings", dest="disable_warnings", action='store_true')
+parser.add_argument("--pretrained", dest="pretrained", action='store_true')
+parser.add_argument("--trim_test", dest="trim_test", action='store_true')
+parser.add_argument("--test", dest="test", action='store_true')
 
 # Parse the user inputs and defaults (returns a argparse.Namespace)
 
@@ -41,9 +47,14 @@ args = parser.parse_args()
 pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
 
+if torch.cuda.is_available():
+    device = torch.cuda.get_device_name()
+else:
+    device = "CPU"
 
+print("\nDevice:", device)
 # ------------------------------ Warnings config ----------------------------- #
-if args.disable_warnings == True: 
+if args.disable_warnings: 
     print("Warnings are DISABLED!\n\n")
     warnings.filterwarnings("ignore")
 else:
@@ -60,7 +71,8 @@ from data_setup import HDF5Dataset, FrameTargetDataset
 from lightning_modules.ViTLightningModule import ViTLightningModule
 from lightning_modules.ResNet18LightningModule import ResNet18LightningModule
 from lightning_modules.BEiTLightningModule import BEiTLightningModule
-
+from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
+from lightning_modules.LUSDataModule import LUSDataModule
 # ---------------------------------- Dataset --------------------------------- #
 dataset = HDF5Dataset(args.dataset_h5_path)
 
@@ -89,16 +101,20 @@ else:
     with open(test_indices_path, 'wb') as test_pickle_file:
         pickle.dump(test_indices, test_pickle_file)
 
-# test_subset_size = args.train_ratio/2
-# test_subset = Subset(test_subset, range(int(test_subset_size * len(test_indices))))
-
+if args.trim_test: 
+    test_subset_size = args.train_ratio/2
+    test_subset = Subset(test_subset, range(int(test_subset_size * len(test_indices))))
 
 train_dataset = FrameTargetDataset(train_subset)
 test_dataset = FrameTargetDataset(test_subset)
 
 print(f"Train size: {len(train_dataset)}")
-print(f"Test size: {len(test_dataset)}")
+print(f"Test size: {len(test_dataset)}")    
 
+lus_data_module = LUSDataModule(train_dataset, 
+                                test_dataset, 
+                                args.num_workers, 
+                                args.batch_size)
 
 # ---------------------------------------------------------------------------- #
 #                         Model & trainer configuration                        #
@@ -109,30 +125,23 @@ print(f"Test size: {len(test_dataset)}")
 print("\n\nModel configuration...")
 print('=' * 80)
 
-configuration = {
-    "num_labels": 4,
-    "num_attention_heads": 4,
-    "num_hidden_layers":4
-}
+# configuration = {
+#     "num_labels": 4,
+#     "num_attention_heads": 4,
+#     "num_hidden_layers":4
+# }
 hyperparameters = {
-  "train_dataset": train_dataset,
-  "test_dataset": test_dataset,
-  "batch_size": args.batch_size,
-  "lr": args.lr,
+  "num_classes": 4,
   "optimizer": args.optimizer,
-  "num_workers": args.num_workers if args.accelerator != "mps" else 0,
-  "pretrained": args.pretrained
+  "lr": args.lr,
+  "weight_decay": args.weight_decay,    
+  "momentum": args.momentum
 #   "configuration": configuration
 }
 # Instantiate lightning model
-if args.model == "google_vit":
-  model = ViTLightningModule(**hyperparameters)
-elif args.model == "resnet18":
-  model =  ResNet18LightningModule(**hyperparameters)
-elif args.model == "beit": 
-  model =  BEiTLightningModule(**hyperparameters)
-else:
-  raise ValueError("Invalid model name. Please choose either 'google_vit' or 'resnet18'.")
+model = LUSModelLightningModule(model_name=args.model, 
+                                hparams=hyperparameters,
+                                pretrained=args.pretrained)
 
 
 table_data = []
@@ -144,6 +153,7 @@ for key, value in hyperparameters.items():
 
 table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
 print(table)
+# model.to('cuda')
 
 # print(f"\n\n{model.config}\n")
 
@@ -154,8 +164,8 @@ print('=' * 80)
 # Callbacks
 # -EarlyStopping
 early_stop_callback = EarlyStopping(
-    monitor='validation_loss',
-    patience=3,
+    monitor='training_loss',
+    patience=5,
     strict=False,
     verbose=False,
     mode='min'
@@ -176,9 +186,9 @@ checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir,
                                       save_last=True,
                                       verbose=True)
 
-callbacks=[early_stop_callback, 
-           DeviceStatsMonitor(), 
-           checkpoint_callback]
+callbacks = [DeviceStatsMonitor(), 
+            early_stop_callback,
+             checkpoint_callback]
 
 
 
@@ -188,7 +198,7 @@ print('=' * 80 + "\n")
 # Trainer args
 trainer_args = {
     "accelerator": args.accelerator,
-    "strategy": "ddp" if args.accelerator == "gpu" else "auto",
+    # "strategy": "ddp" if args.accelerator == "gpu" else "auto",
     "max_epochs": args.max_epochs,
     "callbacks": callbacks,
     "precision": args.precision,
@@ -208,8 +218,13 @@ print("\n\n")
 
 # Trainer 
 trainer = Trainer(**trainer_args,
+                #   detect_anomaly=True,
+                #   overfit_batches=0.01,
+                #   val_check_interval=0.25,
+                #   gradient_clip_val=0.1,
                   default_root_dir = checkpoint_dir)
-# Create a Tuner
+
+# Trainer tuner
 # tuner = Tuner(trainer)
 # tuner.lr_find(model)
 # Print the information of each callback
@@ -218,34 +233,47 @@ print("Trainer Callbacks:")
 print("-" * 20 + "\n\n")
 for callback in trainer.callbacks:
     print(f"- {type(callback).__name__}")
-    
+
+
 # ---------------------------- Model fit and test ---------------------------- #
-# Check if checkpoint path is provided
-if args.checkpoint_path:
-  
-    checkpoint_path = args.checkpoint_path
+def check_checkpoint(checkpoint_path):
+
     print("Checkpoint mode activated...\n")
-    
+
     if (checkpoint_path == "best"):
-      print("Loading BEST checkpoint...\n")
+        print("Loading BEST checkpoint...\n")
 
     if (checkpoint_path == "last"):
-      print("Loading LAST checkpoint...\n")
+        print("Loading LAST checkpoint...\n")
 
     else:
-      # Check if checkpoint file exists
-      if not os.path.isfile(checkpoint_path):
-          print(f"Checkpoint file '{checkpoint_path}' does not exist. Exiting...")
-          exit()
-    
+    # Check if checkpoint file exists
+        if not os.path.isfile(checkpoint_path):
+            print(f"Checkpoint file '{checkpoint_path}' does not exist. Exiting...")
+            exit()
+
     print(f"Loading checkpoint from PATH: '{checkpoint_path}'...\n")
-    trainer.fit(model, ckpt_path=checkpoint_path)
-else:
-    # Instantiate trainer without checkpoint
-    print("Instantiating trainer without checkpoint...")
-    trainer.fit(model)
 
 
-print("\n\nTESTING MODEL...")
-print('=' * 80 + "\n")
-trainer.test()
+
+if args.mode == "train":
+    print("\n\nTRAINING MODEL...")
+    print('=' * 80 + "\n")
+    if args.checkpoint_path:
+        check_checkpoint(args.checkpoint_path)
+        trainer.fit(model, lus_data_module, ckpt_path=args.checkpoint_path)
+        
+    else:
+        print("Instantiating trainer without checkpoint...")
+        trainer.fit(model, lus_data_module)
+        
+if args.mode == "test":
+    print("\n\nTESTING MODEL...")
+    print('=' * 80 + "\n")
+    if args.checkpoint_path:
+        check_checkpoint(args.checkpoint_path)
+        trainer.test(model, lus_data_module, ckpt_path=args.checkpoint_path)
+    else:
+        print("No checkpoint provided, testing from scratch...")
+        trainer.test(model, lus_data_module)
+
