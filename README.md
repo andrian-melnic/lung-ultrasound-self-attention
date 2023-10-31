@@ -7,7 +7,7 @@
 
 <div align="center">
   
-![Python310](https://img.shields.io/badge/python-3.10-blue)
+![Python310](https://img.shields.io/badge/python-3.11-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-ab4932)
 ![PyTorch Lightning](https://img.shields.io/badge/Lightning-6a4ae1)
 ![UNIVPM](https://img.shields.io/badge/organization-UNIVPM-red)
