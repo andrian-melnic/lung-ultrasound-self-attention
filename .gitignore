@@ -10,8 +10,10 @@ frame_info.pkl
 
 # Distribution / packaging
 .Python
+tb_logs/
 build/
 develop-eggs/
+data/
 dist/
 downloads/
 eggs/
@@ -153,4 +155,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 data/dataset_test.h5
+*.ckpt
+*.pkl
+*.pkl
 *.h5

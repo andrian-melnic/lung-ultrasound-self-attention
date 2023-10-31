@@ -2,16 +2,9 @@
 from transformers import ViTForImageClassification
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import torch
 from transformers import ViTImageProcessor
-from torchvision.transforms import (CenterCrop,
-                                    Compose,
-                                    Normalize,
-                                    RandomHorizontalFlip,
-                                    RandomResizedCrop,
-                                    Resize,
-                                    ToTensor)
 import torchvision.transforms as transforms
 
 
@@ -31,7 +24,7 @@ def pp_frames(frame_data):
     image_mean = processor.image_mean
     image_std = processor.image_std
     size = processor.size["height"]
-    normalize = Normalize(mean=image_mean, std=image_std)
+    normalize = transforms.Normalize(mean=image_mean, std=image_std)
 
 
     frame_tensor = transforms.ToTensor()(frame_data)
@@ -101,20 +94,20 @@ class ViTLightningModule(pl.LightningModule):
         return DataLoader(self.train_dataset,
                             shuffle=True,
                             collate_fn=collate_fn,
-                            batch_size=self.batch_size,
-                            num_workers=self.num_workers, persistent_workers=True)
+                            batch_size=self.batch_size)
+                            # num_workers=self.num_workers, persistent_workers=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset,
                             collate_fn=collate_fn,
-                            batch_size=self.batch_size,
-                            num_workers=self.num_workers, persistent_workers=True)
+                            batch_size=self.batch_size)
+                            # num_workers=self.num_workers, persistent_workers=True)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset,
                             collate_fn=collate_fn,
-                            batch_size=self.batch_size,
-                            num_workers=self.num_workers, persistent_workers=True)
+                            batch_size=self.batch_size)
+                            # num_workers=self.num_workers, persistent_workers=True)
 
 
 print("-"*20)
