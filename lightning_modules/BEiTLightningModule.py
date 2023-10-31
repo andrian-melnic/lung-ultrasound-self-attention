@@ -7,12 +7,13 @@ import torch
 import torchvision
 from transformers import BeitForImageClassification, AutoImageProcessor
 import torchvision.transforms as transforms
-from torchmetrics.classification import MulticlassF1Score
+from torchmetrics.classification import MulticlassF1Score, Accuracy
 import torchmetrics.functional as metrics
 from kornia import tensor_to_image
 import matplotlib.pyplot as plt
 from data_setup import DataAugmentation
 from data_setup import FrameTargetDataset
+from lightning.pytorch.utilities import grad_norm
 
 def collate_fn(examples):
     frames = torch.stack([example[0] for example in examples])  # Extract the preprocessed frames
@@ -47,14 +48,17 @@ class BEiTLightningModule(pl.LightningModule):
         self.num_workers = num_workers
         self.optimizer_name = str(optimizer).lower()
         self.optimizer = None
+        # self.criterion = nn.CrossEntropyLoss()
         self.f1_score_metric = MulticlassF1Score(num_classes=num_classes)
+        self.train_acc = Accuracy(task='multiclass', num_classes=num_classes)
+        self.val_acc = Accuracy(task='multiclass', num_classes=num_classes)
         
         
     def on_after_batch_transfer(self, batch, dataloader_idx):
-        pixel_values, labels = batch
+        x, y = batch
         if self.trainer.training:
-            x = self.transform(pixel_values)  # => we perform GPU/Batched data augmentation
-        return x, labels
+            x = self.transform(x)  # => we perform GPU/Batched data augmentation
+        return x, y
       
       
     def forward(self, pixel_values):
@@ -62,43 +66,31 @@ class BEiTLightningModule(pl.LightningModule):
         return outputs.logits
       
     
-    def common_step(self, batch, batch_idx):
-      
-        pixel_values, labels = batch
-        
-        logits = self(pixel_values)
-
-        criterion = nn.CrossEntropyLoss()
-        loss = criterion(logits, labels)
-        predictions = logits.argmax(-1)
-        correct = (predictions == labels).sum().item()
-        accuracy = correct/pixel_values.shape[0]
-        #accuracy = torchmetrics.functional.accuracy(predictions, labels, task="multiclass", num_classes=4)
-        f1 = self.f1_score_metric(logits, labels)
-
-        return loss, accuracy, f1
-      
     def training_step(self, batch, batch_idx):
-        loss, accuracy, f1 = self.common_step(batch, batch_idx)
-        self.log("training_loss", loss, on_epoch=True, prog_bar=True)
-        self.log("training_accuracy", accuracy, on_epoch=True, prog_bar=True)
-        self.log("training_f1", f1, on_epoch=True, prog_bar=True)
-
+        x, y = batch
+        logits = self(x)
+        loss = nn.functional.cross_entropy(logits, y)
+        self.train_acc(logits, y)
+        self.log('training_loss', loss, prog_bar=True)
+        self.log('training_accuracy', self.train_acc, prog_bar=True)
+        
         return loss
 
-    def test_step(self, batch, batch_idx):
-        loss, accuracy, f1 = self.common_step(batch, batch_idx)
-        self.log("test_loss", loss, on_epoch=True, prog_bar=True)
-        self.log("test_accuracy", accuracy, on_epoch=True, prog_bar=True)
-        self.log("test_f1", f1, on_epoch=True, prog_bar=True)
+    def validation_step(self, batch, batch_idx):
+        x, y = batch
+        logits = self(x)
+        loss = nn.functional.cross_entropy(logits, y)
+        self.val_acc(logits, y)
+        self.log('validation_loss', loss, prog_bar=True)
+        self.log('validation_acc', self.val_acc, prog_bar=True)
+        
 
-        return loss
 
     def configure_optimizers(self):
         if self.optimizer_name == "adam":
-            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0.05)
+            self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0.005)
         elif self.optimizer_name == "sgd":
-            self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr)
+            self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=0.4, weight_decay=0.005)
         else:
             raise ValueError("Invalid optimizer name. Please choose either 'adam' or 'sgd'.")
 
@@ -109,9 +101,9 @@ class BEiTLightningModule(pl.LightningModule):
                           batch_size=self.batch_size,
                           num_workers=self.num_workers,
                           pin_memory=True,
-                          collate_fn=collate_fn, shuffle=False)
+                          collate_fn=collate_fn, shuffle=True)
 
-    def test_dataloader(self):
+    def val_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size=self.batch_size,
                           pin_memory=True,
