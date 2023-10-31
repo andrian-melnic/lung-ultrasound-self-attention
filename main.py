@@ -27,6 +27,7 @@ allowed_models = ["google_vit",
                   "botnet18", 
                   "botnet50",
                   "vit",
+                  "swin_vit",
                   "simple_vit"]
 allowed_modes = ["train", "test", "train_test"]
 parser.add_argument("--model", type=str, choices=allowed_models)
@@ -51,6 +52,7 @@ parser.add_argument("--accelerator", type=str, default="gpu")
 parser.add_argument("--precision", default=32)
 parser.add_argument("--disable_warnings", dest="disable_warnings", action='store_true')
 parser.add_argument("--pretrained", dest="pretrained", action='store_true')
+parser.add_argument("--layers_to_freeze", type=str)
 parser.add_argument("--test", dest="test", action='store_true')
 
 # Parse the user inputs and defaults (returns a argparse.Namespace)
@@ -66,6 +68,8 @@ else:
     device = "CPU"
 
 print("\nDevice:", device)
+
+
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
     print("Warnings are DISABLED!\n\n")
@@ -183,10 +187,17 @@ hyperparameters = {
 #   "configuration": configuration
 }
 # Instantiate lightning model
+
+if args.pretrained:
+    if args.layers_to_freeze:
+        freeze_up_to_layer = args.layers_to_freeze
+    else:
+        freeze_up_to_layer = None
 model = LUSModelLightningModule(model_name=args.model, 
                                 hparams=hyperparameters,
                                 class_weights=weights_tensor,
-                                pretrained=args.pretrained)
+                                pretrained=args.pretrained,
+                                freeze_up_to_layer=freeze_up_to_layer)
 
 
 table_data = []
@@ -219,7 +230,8 @@ early_stop_callback = EarlyStopping(
 # -Logger configuration
 name_trained = "pretrained_" if args.pretrained==True else ""
 name_trimmed = "trimmed_" if args.trim_data else ""
-model_name = f"{name_trained}{name_trimmed}{args.model}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
+name_layer = f"{args.layers_to_freeze}_" if args.layers_to_freeze else ""
+model_name = f"{name_trained}{name_layer}{name_trimmed}{args.model}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
 if args.version:
     version = args.version
 else:
