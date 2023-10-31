@@ -77,9 +77,10 @@ class ResNet18LightningModule(pl.LightningModule):
 
 
     def on_after_batch_transfer(self, batch, dataloader_idx):
-        pixel_values, labels = batch
-        x = self.transform(pixel_values)  # => we perform GPU/Batched data augmentation
-        return x, labels
+        x, y = batch
+        if self.trainer.training:
+            x = self.transform(x)  # => we perform GPU/Batched data augmentation
+        return x, y
       
     
     def training_step(self, batch, batch_idx):
@@ -89,7 +90,7 @@ class ResNet18LightningModule(pl.LightningModule):
         acc = self.accuracy_metric(logits, y)
         self.log('training_loss', loss, prog_bar=True)
         self.log('training_accuracy', acc, prog_bar=True)
-        mps.empty_cache()
+        
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -99,13 +100,13 @@ class ResNet18LightningModule(pl.LightningModule):
         acc = self.accuracy_metric(logits, y)
         self.log('validation_loss', loss, prog_bar=True)
         self.log('validation_acc', acc, prog_bar=True)
-        mps.empty_cache()
+        
 
     def configure_optimizers(self):
         if self.optimizer_name == "adam":
             self.optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=0.005)
         elif self.optimizer_name == "sgd":
-            self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr)
+            self.optimizer = torch.optim.SGD(self.parameters(), lr=self.lr, momentum=0.4, weight_decay=0.005)
         else:
             raise ValueError("Invalid optimizer name. Please choose either 'adam' or 'sgd'.")
 
@@ -114,11 +115,12 @@ class ResNet18LightningModule(pl.LightningModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset,
                           batch_size=self.batch_size,
-                        #   num_workers=self.num_workers,
-                        #   pin_memory=True,
+                        #   num_workers=7,
+                          pin_memory=True,
                           collate_fn=collate_fn, shuffle=True)
 
     def val_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size=self.batch_size,
+                          pin_memory=True,
                           collate_fn=collate_fn)
