@@ -9,10 +9,13 @@ def collate_fn(examples):
     return (frames, scores)
 
 class LUSDataModule(pl.LightningDataModule):
-    def __init__(self, train_dataset, test_dataset, num_workers, batch_size):
+    def __init__(self, train_dataset, test_dataset, val_dataset, num_workers, batch_size):
         super().__init__()
+        
         self.train_dataset = train_dataset
         self.test_dataset = test_dataset
+        self.val_dataset = val_dataset
+        
         self.num_workers = num_workers
         self.batch_size = batch_size
         
@@ -24,15 +27,16 @@ class LUSDataModule(pl.LightningDataModule):
                           collate_fn=collate_fn, shuffle=True)
 
     def val_dataloader(self):
+        return DataLoader(self.val_dataset,
+                          batch_size=self.batch_size,
+                          pin_memory=True,
+                          collate_fn=collate_fn)
+        
+    def test_dataloader(self):
         return DataLoader(self.test_dataset,
                           batch_size=self.batch_size,
                           pin_memory=True,
                           collate_fn=collate_fn)
-    # def test_dataloader(self):
-    #     return DataLoader(self.test_dataset,
-    #                       batch_size=self.batch_size,
-    #                       pin_memory=True,
-    #                       collate_fn=collate_fn)
 
     # def test_dataloader(self):
     #     return DataLoader(self.mnist_test, batch_size=32)
