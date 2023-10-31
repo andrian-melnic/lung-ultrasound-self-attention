@@ -112,11 +112,39 @@ class LUSModelLightningModule(pl.LightningModule):
 
 
         self.optimizer_name = str(hparams['optimizer']).lower()
-        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.test_criterion = nn.CrossEntropyLoss()
         self.save_hyperparameters()
 
-# -------------------------------- google vit -------------------------------- #
+# -------------------------------- vit -------------------------------------- #
+        if model_name == 'swin_vit':
+            
+            print(f"\nUsing pretrained weights: {pretrained}\n")
+            self.model = timm.create_model('swin_tiny_patch4_window7_224', 
+                                           pretrained=pretrained, 
+                                           num_classes=self.num_classes)
+            if self.pretrained:
+                if self.freeze_up_to_layer is None:
+                    print("Freezing layers up to head")
+                    # If no specific layer is provided, freeze all layers except 'head'
+                    for name, param in self.model.named_parameters():
+                        if 'head' in name:
+                            param.requires_grad = True
+                        else:
+                            param.requires_grad = False
+                else:
+                    # Freeze layers up to the specified layer
+                    freeze = True
+                    for name, param in self.model.named_parameters():
+                        if self.freeze_up_to_layer in name:
+                            freeze = False
+                        if freeze:
+                            param.requires_grad = False
+                    for name, param in self.model.named_parameters():
+                        print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
+                
         if model_name == 'vit':
+            
             print(f"\nUsing pretrained weights: {pretrained}\n")
             self.model = ViT(
                     image_size = 224,
@@ -222,7 +250,7 @@ class LUSModelLightningModule(pl.LightningModule):
         """
         x, y = batch
         logits = self(x)
-        loss = self.criterion(logits, y)
+        loss = self.train_criterion(logits, y)
         self.train_acc(logits, y)
         self.train_f1(logits, y)
         self.log('training_loss', loss, 
@@ -252,7 +280,7 @@ class LUSModelLightningModule(pl.LightningModule):
         """
         x, y = batch
         logits = self(x)
-        loss = self.criterion(logits, y)
+        loss = self.test_criterion(logits, y)
         self.test_acc(logits, y)
         self.test_f1(logits, y)
         self.log('test_loss', loss, prog_bar=True)
@@ -273,7 +301,7 @@ class LUSModelLightningModule(pl.LightningModule):
         """
         x, y = batch
         logits = self(x)
-        loss = self.criterion(logits, y)
+        loss = self.test_criterion(logits, y)
         self.val_acc(logits, y)
         self.val_f1(logits, y)
         self.log('validation_loss', loss, prog_bar=True)

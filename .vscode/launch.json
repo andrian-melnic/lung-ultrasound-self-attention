@@ -2,6 +2,40 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "swin_vit",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": [
+        "--model", "swin_vit",
+        "--mode", "train", 
+        // "--version", "drop_0.3",
+        "--working_dir_path", ".",
+        "--dataset_h5_path", "data/iclus/dataset.h5",
+        "--hospitaldict_path", "data/iclus/hospitals-patients-dict.pkl",
+        "--rseed", "42",
+        "--train_ratio", "0.6",
+        "--trim_data", "0.15",
+        "--pretrained",
+        "--layers_to_freeze", "layers.3",
+        "--batch_size", "8",
+        "--optimizer", "adam",
+        "--lr","0.001",
+        "--weight_decay", " 0.0001",
+        "--momentum", "0.9",
+        "--max_epochs", "10",
+        "--num_workers", "0",
+        "--accumulate_grad_batches", "1",
+        "--accelerator", "mps",
+        "--precision", "32",
+        "--disable_warnings",
+        // "--checkpoint_path", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_vit/sgd/ds_0.6_lr0.01_bs16/epoch=49-validation_loss=0.1290.ckpt"
+        // "--checkpoint_path", "last"
+      ]
+    },
+    {
       "name": "vit",
       "type": "python",
       "request": "launch",
