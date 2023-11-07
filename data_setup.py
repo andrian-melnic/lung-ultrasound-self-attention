@@ -4,11 +4,10 @@ import h5py
 from tqdm import tqdm
 import pickle
 import random
-from torchvision.transforms import v2
 from collections import defaultdict
 import torch
 import torch.nn as nn
-import kornia.augmentation as K
+from torchvision.transforms import v2
 
 
 # ---------------------------------------------------------------------------- #
@@ -200,41 +199,7 @@ class FrameTargetDataset(Dataset):
     #     return 
       
       
-# ---------------------------------------------------------------------------- #
-#                               DataAugmentation                               #
-# ---------------------------------------------------------------------------- #
 
-class DataAugmentation(nn.Module):
-    """Module to perform data augmentation using Kornia on torch tensors."""
-
-    def __init__(self):
-        super().__init__()
-        # self.transforms = torch.nn.Sequential(
-        #     K.RandomRotation(degrees=(-20, 20)),  # random rotation between -20 to 20 degrees
-        #     K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
-        # )
-        
-        self.transforms = torch.nn.Sequential(
-            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.25), p=0.5),
-            K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.3),
-            K.RandomResizedCrop(size=(224,224), scale=(0.7, 1.0), p=0.3),
-            K.RandomContrast(contrast=(0.5, 1), p=0.5),
-            K.RandomGaussianBlur((3, 3), (0.5, 1.5), p=0.3)
-        )
-
-    @torch.no_grad()  # disable gradients for efficiency
-    def forward(self, x):
-        """Perform data augmentation on input tensor.
-
-        Args:
-            x (torch.Tensor): Input tensor of shape BxCxHxW.
-
-        Returns:
-            torch.Tensor: Augmented tensor of shape BxCxHxW.
-        """
-        x_out = self.transforms(x)
-        return x_out
-    
 def _load_dsdata_pickle(dataset, pkl_file):
     # Check if the pickle file exists
         if pkl_file and os.path.exists(pkl_file):

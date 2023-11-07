@@ -24,7 +24,9 @@ class LUSDataModule(pl.LightningDataModule):
                           batch_size=self.batch_size,
                           num_workers=self.num_workers,
                           pin_memory=True,
-                          collate_fn=collate_fn, shuffle=True)
+                          collate_fn=collate_fn
+                        #   shuffle=True
+                          )
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset,

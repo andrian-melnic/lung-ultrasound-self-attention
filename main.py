@@ -57,6 +57,8 @@ parser.add_argument("--pretrained", dest="pretrained", action='store_true')
 parser.add_argument("--freeze_layers", type=str)
 parser.add_argument("--test", dest="test", action='store_true')
 
+
+
 # Parse the user inputs and defaults (returns a argparse.Namespace)
 
 print("\n" + "-"*80 + "\n")
@@ -70,7 +72,8 @@ else:
     device = "CPU"
 
 print("\nDevice:", device)
-
+# Set default tensor device
+torch.set_default_device(f"{args.accelerator}")
 
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
@@ -88,9 +91,9 @@ import sys
 sys.path.append(working_dir)
 from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_sets
 # from dataset import RichHDF5Dataset, HDF5Dataset, split_strategy, plot_split_graphs, reduce_sets
-from lightning_modules.ViTLightningModule import ViTLightningModule
-from lightning_modules.ResNet18LightningModule import ResNet18LightningModule
-from lightning_modules.BEiTLightningModule import BEiTLightningModule
+# from lightning_modules.ViTLightningModule import ViTLightningModule
+# from lightning_modules.ResNet18LightningModule import ResNet18LightningModule
+# from lightning_modules.BEiTLightningModule import BEiTLightningModule
 from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
 from lightning_modules.LUSDataModule import LUSDataModule
 

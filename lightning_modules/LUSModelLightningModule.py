@@ -11,7 +11,7 @@ from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
 
-from data_setup import DataAugmentation
+from data_augmentation import DataAugmentation
 
 
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
