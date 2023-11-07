@@ -22,6 +22,7 @@ import json
 parser = ArgumentParser()
 allowed_models = ["google_vit", 
                   "resnet18",
+                  "resnet50",
                   "beit", 
                   'timm_bot', 
                   "botnet18", 
@@ -29,6 +30,7 @@ allowed_models = ["google_vit",
                   "vit",
                   "swin_vit",
                   "simple_vit"]
+
 allowed_modes = ["train", "test", "train_test"]
 parser.add_argument("--model", type=str, choices=allowed_models)
 parser.add_argument("--mode", type=str, choices=allowed_modes)
@@ -52,7 +54,7 @@ parser.add_argument("--accelerator", type=str, default="gpu")
 parser.add_argument("--precision", default=32)
 parser.add_argument("--disable_warnings", dest="disable_warnings", action='store_true')
 parser.add_argument("--pretrained", dest="pretrained", action='store_true')
-parser.add_argument("--layers_to_freeze", type=str)
+parser.add_argument("--freeze_layers", type=str)
 parser.add_argument("--test", dest="test", action='store_true')
 
 # Parse the user inputs and defaults (returns a argparse.Namespace)
@@ -125,14 +127,22 @@ val_subset = Subset(dataset, val_indices)
 
 
 if args.trim_data:
-    train_indices_trimmed, val_indices_trimmed, test_indices_trimmed = reduce_sets(args.rseed,
-                                                                                   train_subset,
-                                                                                   val_subset,
-                                                                                   test_subset,
-                                                                                   args.trim_data)
+    train_indices_trimmed, \
+    val_indices_trimmed, \
+    test_indices_trimmed = reduce_sets(args.rseed,
+                                       train_subset,
+                                       val_subset,
+                                       test_subset,
+                                       args.trim_data)
+    
     train_subset = Subset(dataset, train_indices_trimmed)
     test_subset = Subset(dataset, test_indices_trimmed)
     val_subset = Subset(dataset, val_indices_trimmed)
+    
+    train_indices = train_indices_trimmed
+    val_indices = val_indices_trimmed
+    test_indices = test_indices_trimmed
+
 
 train_dataset = FrameTargetDataset(train_subset)
 test_dataset = FrameTargetDataset(test_subset)
@@ -155,10 +165,13 @@ ds_labels = split_info['labels']
 
 # Extract the train and test set labels
 y_train_labels = np.array(ds_labels)[train_indices]
-y_test_labels = np.array(ds_labels)[test_indices]
+# y_test_labels = np.array(ds_labels)[test_indices]
 
 # Calculate class balance using 'compute_class_weight'
-class_weights = compute_class_weight('balanced', classes=np.unique(y_train_labels), y=y_train_labels)
+class_weights = compute_class_weight('balanced', 
+                                     classes=np.unique(y_train_labels), 
+                                     y=y_train_labels)
+
 weights_tensor = torch.Tensor(class_weights)
 print("Class Weights: ", class_weights)
 
@@ -188,16 +201,15 @@ hyperparameters = {
 }
 # Instantiate lightning model
 
+freeze_layers = None
 if args.pretrained:
-    if args.layers_to_freeze:
-        freeze_up_to_layer = args.layers_to_freeze
-    else:
-        freeze_up_to_layer = None
+    if args.freeze_layers:
+        freeze_layers = args.freeze_layers
 model = LUSModelLightningModule(model_name=args.model, 
                                 hparams=hyperparameters,
                                 class_weights=weights_tensor,
                                 pretrained=args.pretrained,
-                                freeze_up_to_layer=freeze_up_to_layer)
+                                freeze_layers=freeze_layers)
 
 
 table_data = []
@@ -230,7 +242,7 @@ early_stop_callback = EarlyStopping(
 # -Logger configuration
 name_trained = "pretrained_" if args.pretrained==True else ""
 name_trimmed = "trimmed_" if args.trim_data else ""
-name_layer = f"{args.layers_to_freeze}_" if args.layers_to_freeze else ""
+name_layer = f"{args.freeze_layers}_" if args.freeze_layers else ""
 model_name = f"{name_trained}{name_layer}{name_trimmed}{args.model}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
 if args.version:
     version = args.version
@@ -322,7 +334,7 @@ def check_checkpoint(checkpoint_path):
 
     print(f"Loading checkpoint from PATH: '{checkpoint_path}'...\n")
 
-
+# model = torch.compile(model, mode="reduce-overhead")
 
 if args.mode == "train":
     print("\n\nTRAINING MODEL...")
