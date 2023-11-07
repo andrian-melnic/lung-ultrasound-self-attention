@@ -13,7 +13,7 @@ from vit_pytorch import ViT, SimpleViT
 
 from data_setup import DataAugmentation
 
-  
+
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
 label2id = {"no": 0, "yellow": 1, "orange": 2, "red": 3}
 
@@ -23,7 +23,7 @@ class LUSModelLightningModule(pl.LightningModule):
                  hparams,
                  class_weights=None,
                  pretrained=True,
-                 freeze_up_to_layer=None):
+                 freeze_layers=None):
         
         super(LUSModelLightningModule, self).__init__()
         
@@ -39,7 +39,7 @@ class LUSModelLightningModule(pl.LightningModule):
         }
         
         self.pretrained = pretrained
-        self.freeze_up_to_layer = freeze_up_to_layer
+        self.freeze_layers = freeze_layers
         
 # ----------------------------------- Model ---------------------------------- #
 
@@ -58,30 +58,49 @@ class LUSModelLightningModule(pl.LightningModule):
                                   resolution=(224, 224), 
                                   heads=4)
 
-# --------------------------------- resnet18 --------------------------------- #
-        elif model_name == "resnet18":
+# --------------------------------- resnet --------------------------------- #
+        elif model_name == "resnet50":
             if self.pretrained:
                 print("\nUsing pretrained weights\n")
-                self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
-                if self.freeze_up_to_layer is None:
-                    # Freeze all layers except the final classification layer
-                    for name, param in self.model.named_parameters():
-                        if 'fc' not in name:
-                            param.requires_grad = False
-                else:
-                    # Freeze layers up to the specified layer
-                    freeze = True
-                    for name, param in self.model.named_parameters():
-                        if self.freeze_up_to_layer in name:
-                            freeze = False
-                        if freeze:
-                            param.requires_grad = False
-                # Replace the final classification layer with a new one for the specific number of classes
-            else:
-                print("\nNo pretrained weights\n")
-                self.model = resnet18(weights=None)
-            self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
                 
+                self.model = timm.create_model("resnet50.a1_in1k",
+                                               pretrained=True,
+                                               num_classes=self.num_classes)
+                # List of layers to exclude from freezing
+                excluded_layers = ['fc', 'layer3', 'layer4']
+
+                # Freeze all layers
+                for param in self.model.parameters():
+                    param.requires_grad = False
+
+                # Unfreeze the layers in the excluded list
+                for name, param in self.model.named_parameters():
+                    if any(layer in name for layer in excluded_layers):
+                        param.requires_grad = True
+                        
+                # Print all layers and their requires_grad status
+                for name, param in self.model.named_parameters():
+                    print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
+                        
+            #     self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
+            #     if self.freeze_layers is None:
+            #         # Freeze all layers except the final classification layer
+            #         for name, param in self.model.named_parameters():
+            #             if 'fc' not in name:
+            #                 param.requires_grad = False
+            #     else:
+            #         # Freeze layers up to the specified layer
+            #         freeze = True
+            #         for name, param in self.model.named_parameters():
+            #             if self.freeze_layers in name:
+            #                 freeze = False
+            #             if freeze:
+            #                 param.requires_grad = False
+            #     # Replace the final classification layer with a new one for the specific number of classes
+            # else:
+            #     print("\nNo pretrained weights\n")
+            #     self.model = resnet18(weights=None)
+            # self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
             print(f"\nUsing pretrained weights: {pretrained}\n")
@@ -91,7 +110,7 @@ class LUSModelLightningModule(pl.LightningModule):
                                            )
             if self.pretrained:
                 print("Freezing layers up to head")
-                if self.freeze_up_to_layer is None:
+                if self.freeze_layers is None:
                     # If no specific layer is provided, freeze all layers except 'head'
                     for name, param in self.model.named_parameters():
                         if 'head' in name:
@@ -102,7 +121,7 @@ class LUSModelLightningModule(pl.LightningModule):
                     # Freeze layers up to the specified layer
                     freeze = True
                     for name, param in self.model.named_parameters():
-                        if self.freeze_up_to_layer in name:
+                        if self.freeze_layers in name:
                             freeze = False
                         if freeze:
                             param.requires_grad = False
@@ -120,28 +139,39 @@ class LUSModelLightningModule(pl.LightningModule):
         if model_name == 'swin_vit':
             
             print(f"\nUsing pretrained weights: {pretrained}\n")
-            self.model = timm.create_model('swin_tiny_patch4_window7_224', 
+            self.model = timm.create_model('swin_base_patch4_window7_224.ms_in1k', 
                                            pretrained=pretrained, 
                                            num_classes=self.num_classes)
             if self.pretrained:
-                if self.freeze_up_to_layer is None:
-                    print("Freezing layers up to head")
-                    # If no specific layer is provided, freeze all layers except 'head'
+                if self.freeze_layers is not None:
+                    print("Freezing all layers with {self.freeze_layers} in name")
                     for name, param in self.model.named_parameters():
-                        if 'head' in name:
-                            param.requires_grad = True
-                        else:
+                        if self.freeze_layers in name:
                             param.requires_grad = False
-                else:
-                    # Freeze layers up to the specified layer
-                    freeze = True
-                    for name, param in self.model.named_parameters():
-                        if self.freeze_up_to_layer in name:
-                            freeze = False
-                        if freeze:
-                            param.requires_grad = False
-                    for name, param in self.model.named_parameters():
-                        print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
+                            
+                    # if 'head' in name:
+                    #     param.requires_grad = True
+                        
+            # printing all layers and require grads
+            for name, param in self.model.named_parameters():
+                print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
+                        
+                # if self.freeze_layers is None:
+                #     print("Freezing layers up to head")
+                #     # If no specific layer is provided, freeze all layers except 'head'
+                #     for name, param in self.model.named_parameters():
+                #         if 'head' in name:
+                #             param.requires_grad = True
+                #         else:
+                #             param.requires_grad = False
+                # else:
+                #     # Freeze layers up to the specified layer
+                #     freeze = True
+                #     for name, param in self.model.named_parameters():
+                #         if self.freeze_layers in name:
+                #             freeze = True
+                #         if freeze:
+                #             param.requires_grad = True
                 
         if model_name == 'vit':
             
@@ -256,15 +286,17 @@ class LUSModelLightningModule(pl.LightningModule):
         self.log('training_loss', loss, 
                  prog_bar=True,
                  on_epoch=True,
-                 logger=True)
+                 logger=True,
+                 on_step=False)
         self.log('training_accuracy', self.train_acc(logits, y), 
                  prog_bar=True,
                  on_epoch=True,
-                 logger=True)
-        self.log('training_f1', self.train_f1(logits, y), 
-                 prog_bar=True,
-                 on_epoch=True,
-                 logger=True)
+                 logger=True,
+                 on_step=False)
+        # self.log('training_f1', self.train_f1(logits, y), 
+        #          prog_bar=True,
+        #          on_epoch=True,
+        #          logger=True)
         return loss
 
     def test_step(self, batch, batch_idx):
