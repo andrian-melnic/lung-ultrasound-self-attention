@@ -5,11 +5,11 @@ import timm
 import lightning.pytorch as pl
 from kornia import tensor_to_image
 import matplotlib.pyplot as plt
-from torchmetrics.classification import MulticlassF1Score, Accuracy
 from torchvision.models import resnet18, ResNet18_Weights
 from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
+from torchmetrics.classification import MulticlassF1Score, Accuracy
 
 from data_augmentation import DataAugmentation
 
@@ -59,148 +59,75 @@ class LUSModelLightningModule(pl.LightningModule):
                                   heads=4)
 
 # --------------------------------- resnet --------------------------------- #
-        elif model_name == "resnet50":
-            if self.pretrained:
-                print("\nUsing pretrained weights\n")
+        if "resnet" in model_name:
+            print("\nUsing pretrained weights {selfpretrained}\n")
                 
-                self.model = timm.create_model("resnet50.a1_in1k",
-                                               pretrained=True,
-                                               num_classes=self.num_classes)
+            self.model = timm.create_model("{model_name}.a1_in1k",
+                                            pretrained={selfpretrained},
+                                            num_classes=self.num_classes)
+            if self.pretrained:
                 # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer3', 'layer4']
-
-                # Freeze all layers
-                for param in self.model.parameters():
-                    param.requires_grad = False
-
-                # Unfreeze the layers in the excluded list
-                for name, param in self.model.named_parameters():
-                    if any(layer in name for layer in excluded_layers):
-                        param.requires_grad = True
-                        
-                # Print all layers and their requires_grad status
-                for name, param in self.model.named_parameters():
-                    print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
-                        
-            #     self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
-            #     if self.freeze_layers is None:
-            #         # Freeze all layers except the final classification layer
-            #         for name, param in self.model.named_parameters():
-            #             if 'fc' not in name:
-            #                 param.requires_grad = False
-            #     else:
-            #         # Freeze layers up to the specified layer
-            #         freeze = True
-            #         for name, param in self.model.named_parameters():
-            #             if self.freeze_layers in name:
-            #                 freeze = False
-            #             if freeze:
-            #                 param.requires_grad = False
-            #     # Replace the final classification layer with a new one for the specific number of classes
-            # else:
-            #     print("\nNo pretrained weights\n")
-            #     self.model = resnet18(weights=None)
-            # self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
+                self.freeze_layers_with_exclusion(excluded_layers)
+                self.print_layers_req_grad()
+            
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
-            print(f"\nUsing pretrained weights: {pretrained}\n")
+            print("\nUsing pretrained weights {selfpretrained}\n")
+
             self.model = timm.create_model('botnet26t_256.c1_in1k',
                                            pretrained=self.pretrained,
                                            num_classes=self.num_classes,
                                            )
             if self.pretrained:
-                print("Freezing layers up to head")
-                if self.freeze_layers is None:
-                    # If no specific layer is provided, freeze all layers except 'head'
-                    for name, param in self.model.named_parameters():
-                        if 'head' in name:
-                            param.requires_grad = True
-                        else:
-                            param.requires_grad = False
-                else:
-                    # Freeze layers up to the specified layer
-                    freeze = True
-                    for name, param in self.model.named_parameters():
-                        if self.freeze_layers in name:
-                            freeze = False
-                        if freeze:
-                            param.requires_grad = False
-                    for name, param in self.model.named_parameters():
-                        print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
+                # List of layers to exclude from freezing
+                excluded_layers = ['fc', 'layer3', 'layer4']
+                self.freeze_layers_with_exclusion(excluded_layers)
+                self.print_layers_req_grad()
 
-
-
-        self.optimizer_name = str(hparams['optimizer']).lower()
-        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights)
-        self.test_criterion = nn.CrossEntropyLoss()
-        self.save_hyperparameters()
-
-# -------------------------------- vit -------------------------------------- #
+# -------------------------------- swin_vit ---------------------------------- #
         if model_name == 'swin_vit':
             
             print(f"\nUsing pretrained weights: {pretrained}\n")
             self.model = timm.create_model('swin_base_patch4_window7_224.ms_in1k', 
                                            pretrained=pretrained, 
                                            num_classes=self.num_classes)
+            
             if self.pretrained:
                 if self.freeze_layers is not None:
-                    print("Freezing all layers with {self.freeze_layers} in name")
-                    for name, param in self.model.named_parameters():
-                        if self.freeze_layers in name:
-                            param.requires_grad = False
-                            
-                    # if 'head' in name:
-                    #     param.requires_grad = True
-                        
-            # printing all layers and require grads
-            for name, param in self.model.named_parameters():
-                print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
-                        
-                # if self.freeze_layers is None:
-                #     print("Freezing layers up to head")
-                #     # If no specific layer is provided, freeze all layers except 'head'
-                #     for name, param in self.model.named_parameters():
-                #         if 'head' in name:
-                #             param.requires_grad = True
-                #         else:
-                #             param.requires_grad = False
-                # else:
-                #     # Freeze layers up to the specified layer
-                #     freeze = True
-                #     for name, param in self.model.named_parameters():
-                #         if self.freeze_layers in name:
-                #             freeze = True
-                #         if freeze:
-                #             param.requires_grad = True
+                    self.freeze_layers_with_name()
+                else:    
+                    excluded_layers = ['head']
+                    self.freeze_layers_with_exclusion(excluded_layers)
+                    
+                self.print_layers_req_grad()
                 
-        if model_name == 'vit':
-            
-            print(f"\nUsing pretrained weights: {pretrained}\n")
-            self.model = ViT(
-                    image_size = 224,
-                    patch_size = 32,
-                    num_classes = self.num_classes,
-                    dim = 1024,
-                    depth = 6,
-                    heads = 16,
-                    mlp_dim = 2048,
-                    dropout = 0.1,
-                    emb_dropout = 0.1
-                )
-            #TODO - Pretrained version of vit
-            #TODO - Freeze layers up to the specified layer
-            # if self.pretrained:
-            #     # self.model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224',
-            #     #                                                        num_labels=self.num_classes)
-                
-            # else:
-                
+# ------------------------------------ vit ----------------------------------- #
+            # self.model = ViT(
+            #         image_size = 224,
+            #         patch_size = 32,
+            #         num_classes = self.num_classes,
+            #         dim = 1024,
+            #         depth = 6,
+            #         heads = 16,
+            #         mlp_dim = 2048,
+            #         dropout = 0.1,
+            #         emb_dropout = 0.1
+            #     )
+# ------------------------------------ HP ------------------------------------ #
+
+        self.optimizer_name = str(hparams['optimizer']).lower()
+        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.test_criterion = nn.CrossEntropyLoss()
+        self.save_hyperparameters(ignore=['class_weights'])
+        
 # ------------------------------ Data processing ----------------------------- #
 
         self.transform = DataAugmentation()
         
 # ---------------------------------- Metrics --------------------------------- #
 
+        
         self.train_f1 = MulticlassF1Score(num_classes=self.num_classes, average="weighted")
         self.val_f1 = MulticlassF1Score(num_classes=self.num_classes, average="weighted")
         self.test_f1 = MulticlassF1Score(num_classes=self.num_classes, average="weighted")
@@ -299,6 +226,8 @@ class LUSModelLightningModule(pl.LightningModule):
         #          logger=True)
         return loss
 
+
+
     def test_step(self, batch, batch_idx):
         """
         Performs a validation step on a batch of data.
@@ -313,12 +242,14 @@ class LUSModelLightningModule(pl.LightningModule):
         x, y = batch
         logits = self(x)
         loss = self.test_criterion(logits, y)
+        
         self.test_acc(logits, y)
         self.test_f1(logits, y)
+        
         self.log('test_loss', loss, prog_bar=True)
         self.log('test_acc', self.test_acc(logits, y), prog_bar=True)
         self.log('test_f1', self.test_f1(logits, y), prog_bar=True)
-        return loss
+        return loss, logits
     
     def validation_step(self, batch, batch_idx):
         """
@@ -370,3 +301,58 @@ class LUSModelLightningModule(pl.LightningModule):
       plt.figure(figsize=win_size)
       plt.imshow(_to_vis(imgs_aug))
       plt.title("Augmented Images")
+      
+      
+    def freeze_layers_with_exclusion(self, excluded_layers):
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        # Unfreeze the layers in the excluded list
+        for name, param in self.model.named_parameters():
+            if any(layer in name for layer in excluded_layers):
+                param.requires_grad = True  
+                
+    def freeze_layers_with_name(self):
+        print("Freezing all layers with {self.freeze_layers} in name")
+        for name, param in self.model.named_parameters():
+            if self.freeze_layers in name:
+                param.requires_grad = False
+                
+    def print_layers_req_grad(self):
+        # Print all layers and their requires_grad status
+        for name, param in self.model.named_parameters():
+            print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
+            
+            
+# ----------------------------- Confusion Matrix ----------------------------- #
+
+    # def compute_confusion_matrix(self, y_true, y_pred):
+    #         cm = confusion_matrix(y_true, y_pred, labels=range(self.num_classes))
+    #         return cm
+
+    # def plot_confusion_matrix(self, cm, class_names):
+    #     plt.figure(figsize=(10, 8))
+    #     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
+    #     plt.xlabel("Predicted")
+    #     plt.ylabel("True")
+    #     plt.title("Confusion Matrix")
+    #     return plt
+
+    # def log_confusion_matrix(self, cm, class_names, step, logger):
+    #     fig = self.plot_confusion_matrix(cm, class_names)
+    #     logger.experiment.add_figure("Confusion Matrix", fig, global_step=step)
+
+    # def on_test_epoch_end(self, logits):
+    #     # Collect predictions and true labels from all batches in the test set
+    #     y_true = []
+    #     y_pred = []
+    #     for output in logits:
+    #         y_true.extend(output['y_true'].cpu().numpy())
+    #         y_pred.extend(output['y_pred'].cpu().numpy())
+
+    #     # Compute the confusion matrix
+    #     cm = self.compute_confusion_matrix(y_true, y_pred)
+
+    #     # Log the confusion matrix to TensorBoard
+    #     logger = self.logger  # Use your TensorBoard logger
+    #     self.log_confusion_matrix(cm, class_names=["no", "yellow", "orange", "red"], step=self.current_epoch, logger=logger)
