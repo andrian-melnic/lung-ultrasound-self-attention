@@ -2,7 +2,7 @@
 from transformers import ViTForImageClassification
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import lightning.pytorch as pl
+import pytorch_lightning.pytorch as pl
 import torch
 import torchvision
 from transformers import BeitForImageClassification, AutoImageProcessor
@@ -13,7 +13,7 @@ from kornia import tensor_to_image
 import matplotlib.pyplot as plt
 from data_setup import DataAugmentation
 from data_setup import FrameTargetDataset
-from lightning.pytorch.utilities import grad_norm
+from pytorch_lightning.utilities import grad_norm
 
 def collate_fn(examples):
     frames = torch.stack([example[0] for example in examples])  # Extract the preprocessed frames

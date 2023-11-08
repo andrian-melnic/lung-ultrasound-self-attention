@@ -3,17 +3,17 @@ import os
 import glob
 import pickle
 import torch
-import lightning as pl
+import pytorch_lightning as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
-from lightning.pytorch.loggers import TensorBoardLogger
+from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.utils.class_weight import compute_class_weight
-from lightning.pytorch import Trainer
-from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
 from tabulate import tabulate
 from torch.utils.data import Subset
-from lightning.pytorch.tuner import Tuner
+from pytorch_lightning.tuner import Tuner
 
 import json
 

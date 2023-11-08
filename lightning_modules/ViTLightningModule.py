@@ -2,7 +2,7 @@
 from transformers import ViTForImageClassification
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import lightning.pytorch as pl
+import pytorch_lightning.pytorch as pl
 import torch
 import torchvision
 from transformers import ViTImageProcessor

@@ -2,7 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import timm
-import lightning.pytorch as pl
+import pytorch_lightning.pytorch as pl
 from kornia import tensor_to_image
 import matplotlib.pyplot as plt
 from torchvision.models import resnet18, ResNet18_Weights
