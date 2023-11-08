@@ -17,9 +17,11 @@ from lightning.pytorch.tuner import Tuner
 
 import json
 
-
 # ------------------------------ Parse arguments ----------------------------- #
+
+# Parse command-line arguments
 parser = ArgumentParser()
+
 allowed_models = ["google_vit", 
                   "resnet18",
                   "resnet50",
@@ -39,7 +41,7 @@ parser.add_argument("--working_dir_path", type=str)
 parser.add_argument("--dataset_h5_path", type=str)
 parser.add_argument("--hospitaldict_path", type=str)
 parser.add_argument("--trim_data", type=float)
-parser.add_argument("--checkpoint_path", type=str)
+parser.add_argument("--chkp", type=str)
 parser.add_argument("--rseed", type=int)
 parser.add_argument("--train_ratio", type=float, default=0.7)
 parser.add_argument("--batch_size", type=int, default=90)
@@ -56,14 +58,39 @@ parser.add_argument("--pretrained", dest="pretrained", action='store_true')
 parser.add_argument("--freeze_layers", type=str)
 parser.add_argument("--test", dest="test", action='store_true')
 
+# Add an argument for the configuration file
+parser.add_argument('--config', type=str, help='Path to JSON configuration file')
+
+args = parser.parse_args()
+
+# -------------------------------- json config ------------------------------- #
+
+config_path = 'configs/configs.json'
+selected_config = None
+# If a configuration file was provided, load it
+if args.config:
+    with open(config_path, 'r') as f:
+        configurations = json.load(f)
+    for config in configurations:
+        if config['model'] == args.config:
+            selected_config = config
+            break
 
 
-# Parse the user inputs and defaults (returns a argparse.Namespace)
+
+
+    # Override the command-line arguments with the configuration file
+    for key, value in selected_config.items():
+        if hasattr(args, key):
+            setattr(args, key, value)
+
+print(f"args are: {args}")
 
 print("\n" + "-"*80 + "\n")
-args = parser.parse_args()
 pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
+
+
 
 if torch.cuda.is_available():
     device = torch.cuda.get_device_name()
@@ -321,32 +348,32 @@ for callback in trainer.callbacks:
 
 
 # ---------------------------- Model fit and test ---------------------------- #
-def check_checkpoint(checkpoint_path):
+def check_checkpoint(chkp):
 
     print("Checkpoint mode activated...\n")
 
-    if (checkpoint_path == "best"):
+    if (chkp == "best"):
         print("Loading BEST checkpoint...\n")
 
-    if (checkpoint_path == "last"):
+    if (chkp == "last"):
         print("Loading LAST checkpoint...\n")
 
     else:
     # Check if checkpoint file exists
-        if not os.path.isfile(checkpoint_path):
-            print(f"Checkpoint file '{checkpoint_path}' does not exist. Exiting...")
+        if not os.path.isfile(chkp):
+            print(f"Checkpoint file '{chkp}' does not exist. Exiting...")
             exit()
 
-    print(f"Loading checkpoint from PATH: '{checkpoint_path}'...\n")
+    print(f"Loading checkpoint from PATH: '{chkp}'...\n")
 
 # model = torch.compile(model, mode="reduce-overhead")
 
 if args.mode == "train":
     print("\n\nTRAINING MODEL...")
     print('=' * 80 + "\n")
-    if args.checkpoint_path:
-        check_checkpoint(args.checkpoint_path)
-        trainer.fit(model, lus_data_module, ckpt_path=args.checkpoint_path)
+    if args.chkp:
+        check_checkpoint(args.chkp)
+        trainer.fit(model, lus_data_module, ckpt_path=args.chkp)
         
     else:
         print("Instantiating trainer without checkpoint...")
@@ -355,9 +382,9 @@ if args.mode == "train":
 if args.mode == "test":
     print("\n\nTESTING MODEL...")
     print('=' * 80 + "\n")
-    if args.checkpoint_path:
-        check_checkpoint(args.checkpoint_path)
-        trainer.test(model, lus_data_module, ckpt_path=args.checkpoint_path)
+    if args.chkp:
+        check_checkpoint(args.chkp)
+        trainer.test(model, lus_data_module, ckpt_path=args.chkp)
     else:
         print("No checkpoint provided, testing from scratch...")
         trainer.test(model, lus_data_module)

@@ -31,8 +31,8 @@
         "--accelerator", "gpu",
         "--precision", "32",
         "--disable_warnings",
-        // "--checkpoint_path", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_vit/sgd/ds_0.6_lr0.01_bs16/epoch=49-validation_loss=0.1290.ckpt"
-        "--checkpoint_path", "last"
+        // "--chkp", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_vit/sgd/ds_0.6_lr0.01_bs16/epoch=49-validation_loss=0.1290.ckpt"
+        "--chkp", "last"
       ]
     },
     {
@@ -64,8 +64,8 @@
         "--precision", "32",
         "--disable_warnings",
         // "--pretrained",
-        "--checkpoint_path", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_vit/sgd/ds_0.6_lr0.01_bs16/epoch=49-validation_loss=0.1290.ckpt"
-        // "--checkpoint_path", "last"
+        "--chkp", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_vit/sgd/ds_0.6_lr0.01_bs16/epoch=49-validation_loss=0.1290.ckpt"
+        // "--chkp", "last"
       ]
     },
     {
@@ -77,7 +77,7 @@
       "justMyCode": false,
       "args": [
         "--model", "botnet50",
-        "--mode", "train", 
+        "--mode", "test", 
         // "--version", "drop_0.3",
         "--working_dir_path", ".",
         "--dataset_h5_path", "data/iclus/dataset.h5",
@@ -97,8 +97,8 @@
         "--precision", "32",
         "--disable_warnings",
         // "--pretrained",
-        // "--checkpoint_path", "checkpoints/pretrained_timm_bot/sgd/0.0001_32/epoch=29-step=37560.ckpt"
-        // "--checkpoint_path", "last"
+        // "--chkp", "checkpoints/pretrained_timm_bot/sgd/0.0001_32/epoch=29-step=37560.ckpt"
+        "--chkp", "last"
       ]
     },
     {
@@ -111,6 +111,7 @@
       "args": [
         "--model", "botnet18",
         "--mode", "test",  
+        "--version", "def_augmentation",
         "--working_dir_path", ".",
         "--dataset_h5_path", "data/iclus/dataset.h5",
         "--hospitaldict_path", "data/iclus/hospitals-patients-dict.pkl",
@@ -119,18 +120,16 @@
         "--trim_data", "0.15",
         "--batch_size", "16",
         "--optimizer", "sgd",
-        "--lr","0.1",
+        "--lr","0.01",
         "--weight_decay", " 0.0001",
         "--momentum", "0.9",
         "--max_epochs", "100",
         "--num_workers", "0",
-        "--accumulate_grad_batches", "1",
-        "--accelerator", "gpu",
+        "--accumulate_grad_batches", "4",
         "--precision", "32",
         "--disable_warnings",
         // "--pretrained",
-        "--checkpoint_path", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_botnet18/sgd/ds_0.6_lr0.1_bs16/epoch=84-validation_loss=0.4266.ckpt"
-        // "--checkpoint_path", "last"
+        "--chkp", "last"
       ]
     },
     {
@@ -163,8 +162,8 @@
         "--accelerator", "gpu",
         "--precision", "32",
         "--disable_warnings",
-        // "--checkpoint_path", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_resnet18/sgd/ds_0.6_lr0.1_bs16/epoch=53-validation_loss=0.1692.ckpt"
-        "--checkpoint_path", "last"
+        // "--chkp", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_resnet18/sgd/ds_0.6_lr0.1_bs16/epoch=53-validation_loss=0.1692.ckpt"
+        "--chkp", "last"
       ]
     },
     {
@@ -195,8 +194,8 @@
         "--precision", "32",
         "--disable_warnings",
         "--pretrained",
-        // "--checkpoint_path", "checkpoints/pretrained_timm_bot/sgd/0.0001_32/epoch=29-step=37560.ckpt"
-        // "--checkpoint_path", "last"
+        // "--chkp", "checkpoints/pretrained_timm_bot/sgd/0.0001_32/epoch=29-step=37560.ckpt"
+        // "--chkp", "last"
       ]
     },
     {
@@ -244,7 +243,7 @@
         "--accelerator", "gpu",
         "--precision", "32",
         "--disable_warnings", "True",
-        // "--checkpoint_path", "last"
+        // "--chkp", "last"
       ]
     }
   ]
