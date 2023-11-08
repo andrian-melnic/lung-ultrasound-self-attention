@@ -1,13 +1,13 @@
-from argparse import ArgumentParser
-from collections import defaultdict
-from lightning.pytorch.loggers import TensorBoardLogger
 import warnings
 import os
 import glob
 import pickle
-import lightning as pl
 import torch
+import lightning as pl
 import numpy as np
+from argparse import ArgumentParser
+from collections import defaultdict
+from lightning.pytorch.loggers import TensorBoardLogger
 from sklearn.utils.class_weight import compute_class_weight
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
@@ -50,7 +50,6 @@ parser.add_argument("--momentum", type=float, default=0.001)
 parser.add_argument("--max_epochs", type=int, default=1)
 parser.add_argument("--num_workers", type=int, default=4)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
-parser.add_argument("--accelerator", type=str, default="gpu")
 parser.add_argument("--precision", default=32)
 parser.add_argument("--disable_warnings", dest="disable_warnings", action='store_true')
 parser.add_argument("--pretrained", dest="pretrained", action='store_true')
@@ -68,12 +67,16 @@ print("\n" + "-"*80 + "\n")
 
 if torch.cuda.is_available():
     device = torch.cuda.get_device_name()
+elif torch.backends.mps.is_built():
+    device = "mps"  
 else:
-    device = "CPU"
+    device = "cpu"
+
+device = torch.device(device)
 
 print("\nDevice:", device)
 # Set default tensor device
-torch.set_default_device(f"{args.accelerator}")
+torch.set_default_device(f"{device}")
 
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
@@ -96,6 +99,7 @@ from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_se
 # from lightning_modules.BEiTLightningModule import BEiTLightningModule
 from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
 from lightning_modules.LUSDataModule import LUSDataModule
+from lightning_modules.ConfusionMatrixCallback import ConfusionMatrixCallback
 
 # ---------------------------------- Dataset --------------------------------- #
 
@@ -279,8 +283,6 @@ print('=' * 80 + "\n")
 
 # Trainer args
 trainer_args = {
-    "accelerator": args.accelerator,
-    # "strategy": "ddp" if args.accelerator == "gpu" else "auto",
     "max_epochs": args.max_epochs,
     "callbacks": callbacks,
     "precision": args.precision,
