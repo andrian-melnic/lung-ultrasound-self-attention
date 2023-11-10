@@ -3,17 +3,17 @@ import os
 import glob
 import pickle
 import torch
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
-from pytorch_lightning.loggers import TensorBoardLogger
+from lightning.pytorch.loggers import TensorBoardLogger
 from sklearn.utils.class_weight import compute_class_weight
-from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch import Trainer
+from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
 from tabulate import tabulate
 from torch.utils.data import Subset
-from pytorch_lightning.tuner import Tuner
+# from lightning.pytorch.tuner import Tuner
 
 import json
 
@@ -87,17 +87,6 @@ print("\n" + "-"*80 + "\n")
 pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
 
-if torch.cuda.is_available():
-    dev = torch.cuda.get_device_name()
-    accelerator = "gpu"
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    
-elif torch.backends.mps.is_built():
-    accelerator="mps"
-    dev = "mps"  
-    torch.set_default_device(f"{dev}")
-else:
-    dev = "cpu"
 
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
@@ -330,7 +319,7 @@ trainer = Trainer(**trainer_args,
                 #   val_check_interval=0.25,
                 #   gradient_clip_val=0.1,
                     # benchmark=True,
-                    accelerator=accelerator,
+                    accelerator="gpu",
                     default_root_dir = checkpoint_dir)
 
 # Trainer tuner

@@ -2,7 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 import timm
-import pytorch_lightning.pytorch as pl
+import lightning.pytorch as pl
 from kornia import tensor_to_image
 import matplotlib.pyplot as plt
 from torchvision.models import resnet18, ResNet18_Weights
@@ -209,21 +209,20 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         loss = self.train_criterion(logits, y)
         self.train_acc(logits, y)
-        self.train_f1(logits, y)
+        # self.train_f1(logits, y)
         self.log('training_loss', loss, 
                  prog_bar=True,
                  on_epoch=True,
                  logger=True,
                  on_step=False)
-        self.log('training_accuracy', self.train_acc(logits, y), 
-                 prog_bar=True,
+        self.log('training_accuracy', self.train_acc(logits, y),
                  on_epoch=True,
                  logger=True,
                  on_step=False)
-        # self.log('training_f1', self.train_f1(logits, y), 
-        #          prog_bar=True,
+        # self.log('training_f1', self.train_f1(logits, y),
         #          on_epoch=True,
-        #          logger=True)
+        #          logger=True,
+        #          on_step=False)
         return loss
 
 
@@ -247,8 +246,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.test_f1(logits, y)
         
         self.log('test_loss', loss, prog_bar=True)
-        self.log('test_acc', self.test_acc(logits, y), prog_bar=True)
-        self.log('test_f1', self.test_f1(logits, y), prog_bar=True)
+        self.log('test_acc', self.test_acc(logits, y))
+        self.log('test_f1', self.test_f1(logits, y))
         return loss, logits
     
     def validation_step(self, batch, batch_idx):
@@ -268,8 +267,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.val_acc(logits, y)
         self.val_f1(logits, y)
         self.log('validation_loss', loss, prog_bar=True)
-        self.log('validation_acc', self.val_acc(logits, y), prog_bar=True)
-        self.log('validation_f1', self.val_f1(logits, y), prog_bar=True)
+        self.log('validation_acc', self.val_acc(logits, y))
+        self.log('validation_f1', self.val_f1(logits, y))
         return loss
 
     def show_batch(self, win_size=(10, 10)):

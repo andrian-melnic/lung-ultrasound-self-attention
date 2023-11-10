@@ -7,7 +7,7 @@ import random
 from collections import defaultdict
 import torch
 import torch.nn as nn
-from torchvision.transforms import v2
+from torchvision import transforms
 
 
 # ---------------------------------------------------------------------------- #
@@ -159,9 +159,9 @@ class FrameTargetDataset(Dataset):
         image_mean = [0.485, 0.456, 0.406]
         image_std = [0.229, 0.224, 0.225]
 
-        frame_tensor = v2.ToTensor()(frame_data)
-        frame_tensor = v2.Resize(self.resize_size)(frame_tensor)
-        # frame_tensor = v2.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        frame_tensor = transforms.ToTensor()(frame_data)
+        frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
+        # frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
         # frame_tensor = frame_tensor.float() / 255.0
         frame_tensor = frame_tensor.permute(0, 1, 2)
             
@@ -192,9 +192,9 @@ class FrameTargetDataset(Dataset):
     #     image_mean = [0.485, 0.456, 0.406]
     #     image_std = [0.229, 0.224, 0.225]
 
-    #     frame_tensor = v2.ToTensor()(frame_data)
-    #     frame_tensor = v2.Resize(size)(frame_tensor)
-    #     frame_tensor = v2.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+    #     frame_tensor = transforms.ToTensor()(frame_data)
+    #     frame_tensor = transforms.Resize(size)(frame_tensor)
+    #     frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
 
     #     return 
       

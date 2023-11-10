@@ -1,4 +1,3 @@
-from torchvision.transforms import v2
 import kornia.augmentation as K
 import kornia.geometry as KG
 import math
@@ -40,8 +39,8 @@ class DataAugmentation(nn.Module):
         Returns:
             torch.Tensor: Augmented tensor of shape BxCxHxW.
         """
-        # x_out = self.transforms(x)
-        x_out = self.us_classification_augmentation(x)
+        x_out = self.transforms(x)
+        # x_out = self.us_classification_augmentation(x)
         return x_out
 
     def _do_nothing(self, image):

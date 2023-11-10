@@ -1,7 +1,7 @@
 from torchvision.models import resnet18, ResNet18_Weights
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import pytorch_lightning.pytorch as pl
+import lightning.pytorch as pl
 import torch
 from kornia import tensor_to_image
 import torchvision
