@@ -76,9 +76,6 @@ if args.config:
             selected_config = config
             break
 
-
-
-
     # Override the command-line arguments with the configuration file
     for key, value in selected_config.items():
         if hasattr(args, key):
@@ -90,20 +87,17 @@ print("\n" + "-"*80 + "\n")
 pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
 
-
-
 if torch.cuda.is_available():
-    device = torch.cuda.get_device_name()
+    dev = torch.cuda.get_device_name()
+    accelerator = "gpu"
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    
 elif torch.backends.mps.is_built():
-    device = "mps"  
+    accelerator="mps"
+    dev = "mps"  
+    torch.set_default_device(f"{dev}")
 else:
-    device = "cpu"
-
-device = torch.device(device)
-
-print("\nDevice:", device)
-# Set default tensor device
-torch.set_default_device(f"{device}")
+    dev = "cpu"
 
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
@@ -126,7 +120,7 @@ from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_se
 # from lightning_modules.BEiTLightningModule import BEiTLightningModule
 from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
 from lightning_modules.LUSDataModule import LUSDataModule
-from lightning_modules.ConfusionMatrixCallback import ConfusionMatrixCallback
+# from lightning_modules.ConfusionMatrixCallback import ConfusionMatrixCallback
 
 # ---------------------------------- Dataset --------------------------------- #
 
@@ -274,16 +268,18 @@ early_stop_callback = EarlyStopping(
 )
 
 # -Logger configuration
-name_trained = "pretrained_" if args.pretrained==True else ""
-name_trimmed = "trimmed_" if args.trim_data else ""
-name_layer = f"{args.freeze_layers}_" if args.freeze_layers else ""
-model_name = f"{name_trained}{name_layer}{name_trimmed}{args.model}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
-if args.version:
-    version = args.version
-else:
-    version = "v1"
-logger = TensorBoardLogger("tb_logs", name=model_name, version=version)
+version = f"V{args.version}" if args.version else "V1"
+version = version.strip()
 
+version = f"V{args.version}" if args.version else "V1"
+
+name_version = f"_{version}"
+name_trained = "_pretrained" if args.pretrained==True else ""
+name_layer = f"_{args.freeze_layers}" if args.freeze_layers else ""
+name_trimmed = "_trimmed" if args.trim_data else ""
+
+model_name = f"{args.model}{name_version}{name_trained}{name_layer}{name_trimmed}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
+logger = TensorBoardLogger("tb_logs", name=model_name, version=version)
 # -Checkpointing
 #   Checkpoints directory
 checkpoint_dir = f"{working_dir}/checkpoints/{model_name}"
@@ -333,7 +329,8 @@ trainer = Trainer(**trainer_args,
                 #   overfit_batches=0.01,
                 #   val_check_interval=0.25,
                 #   gradient_clip_val=0.1,
-                    benchmark=True,
+                    # benchmark=True,
+                    accelerator=accelerator,
                     default_root_dir = checkpoint_dir)
 
 # Trainer tuner
