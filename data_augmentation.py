@@ -23,25 +23,20 @@ class DataAugmentation(nn.Module):
         #     K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
         # )
         self.transforms = torch.nn.Sequential(
-            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.25), p=0.5),
-            K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.3),
-            K.RandomResizedCrop(size=(224,224), scale=(0.7, 1.0), p=0.3),
+            K.RandomAffine(degrees=(-23, 23), scale=(0.75, 1.75), p=0.5),
+            K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.5),
+            K.RandomResizedCrop(size=(224,224), scale=(0.5, 1.5), p=0.5),
             K.RandomContrast(contrast=(0.5, 1), p=0.5),
-            K.RandomGaussianBlur((3, 3), (0.5, 1.5), p=0.3)
+            K.RandomGamma(gamma=(1.0, 1.5), gain=(1.0, 1.5), p=0.5),
+            K.RandomGaussianBlur((3, 3), (0.5, 1.5), p=0.5),
+            K.RandomHorizontalFlip(p=0.5),
+            K.RandomVerticalFlip(p=0.5)
         )
 
     @torch.no_grad()  # disable gradients for efficiency
     def forward(self, x):
-        """Perform data augmentation on input tensor.
-
-        Args:
-            x (torch.Tensor): Input tensor of shape BxCxHxW.
-
-        Returns:
-            torch.Tensor: Augmented tensor of shape BxCxHxW.
-        """
-        # x_out = self.transforms(x)
-        x_out = self.us_classification_augmentation(x)
+        x_out = self.transforms(x)
+        # x_out = self.us_classification_augmentation(x)
         return x_out
 
     def _do_nothing(self, image):
@@ -62,12 +57,14 @@ class DataAugmentation(nn.Module):
 
     def _image_random_flip_left_right(self, image):
         predicate = self._random_true_false()
-        image_aug = torch.where(predicate, self._image_and_label_flip_left_right(image), self._do_nothing(image))
+        image_aug = self._image_and_label_flip_left_right(image) if predicate else self._do_nothing(image)
+        # image_aug = torch.where(predicate, self._image_and_label_flip_left_right(image), self._do_nothing(image))
         return image_aug
 
     def _image_random_flip_up_down(self, image):
         predicate = self._random_true_false()
-        image_aug = torch.where(predicate, self._image_and_label_flip_up_down(image), self._do_nothing(image))
+        image_aug = self._image_and_label_flip_up_down(image) if predicate else self._do_nothing(image)
+        # image_aug = torch.where(predicate, self._image_and_label_flip_up_down(image), self._do_nothing(image))
         return image_aug
 
     def us_classification_augmentation(self, image):
