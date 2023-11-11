@@ -117,8 +117,8 @@ class LUSModelLightningModule(pl.LightningModule):
 # ------------------------------------ HP ------------------------------------ #
 
         self.optimizer_name = str(hparams['optimizer']).lower()
-        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights)
-        self.test_criterion = nn.CrossEntropyLoss()
+        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=hparams['label_smoothing'])
+        self.test_criterion = nn.CrossEntropyLoss(label_smoothing=hparams['label_smoothing'])
         self.save_hyperparameters(ignore=['class_weights'])
         
 # ------------------------------ Data processing ----------------------------- #
@@ -138,17 +138,12 @@ class LUSModelLightningModule(pl.LightningModule):
 
 # ------------------------------ Methods & Hooks ----------------------------- #
     def configure_optimizers(self):
-        """
-        Configure and return the optimizer based on the selected optimizer name.
-
-        Returns:
-            optimizer (torch.optim.Optimizer): The configured optimizer.
-
-        Raises:
-            ValueError: If the optimizer name is invalid.
-        """
         if self.optimizer_name == "adam":
             optimizer = torch.optim.Adam(self.parameters(),
+                                              lr=self.optim["lr"],
+                                              weight_decay=self.optim["weight_decay"])
+        if self.optimizer_name == "adamw":
+            optimizer = torch.optim.AdamW(self.parameters(),
                                               lr=self.optim["lr"],
                                               weight_decay=self.optim["weight_decay"])
         elif self.optimizer_name == "sgd":
@@ -169,25 +164,9 @@ class LUSModelLightningModule(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def forward(self, x):
-        """
-        Forward pass of the model.
-        Parameters:
-            x (Tensor): The input tensor.
-        Returns:
-            Tensor: The output tensor.
-        """
         return self.model(x)
 
     def on_after_batch_transfer(self, batch, dataloader_idx):
-        """
-        This function is called after a batch transfer in the data loader.
-        It takes in two parameters:
-            - batch: the batch of data
-            - dataloader_idx: the index of the data loader
-        
-        The function performs GPU/batched data augmentation on the pixel values of the batch.
-        It then returns the augmented pixel values (x) and the labels.
-        """
         x, y = batch
         if self.trainer.training:
             x = self.transform(x)  # => we perform GPU/Batched data augmentation
@@ -195,16 +174,7 @@ class LUSModelLightningModule(pl.LightningModule):
       
     
     def training_step(self, batch, batch_idx):
-        """
-        Executes a single training step.
 
-        Args:
-            batch (Tuple): A tuple containing the input data and labels.
-            batch_idx (int): The index of the current batch.
-
-        Returns:
-            float: The computed loss value.
-        """
         x, y = batch
         logits = self(x)
         loss = self.train_criterion(logits, y)
@@ -229,16 +199,7 @@ class LUSModelLightningModule(pl.LightningModule):
 
 
     def test_step(self, batch, batch_idx):
-        """
-        Performs a validation step on a batch of data.
 
-        Args:
-            batch (tuple): A tuple containing the input data and the correspondPing labels.
-            batch_idx (int): The index of the current batch.
-
-        Returns:
-            float: The loss calculated during the validation step.
-        """
         x, y = batch
         logits = self(x)
         loss = self.test_criterion(logits, y)
@@ -252,16 +213,7 @@ class LUSModelLightningModule(pl.LightningModule):
         return loss, logits
     
     def validation_step(self, batch, batch_idx):
-        """
-        Performs a validation step on a batch of data.
 
-        Args:
-            batch (tuple): A tuple containing the input data and the correspondPing labels.
-            batch_idx (int): The index of the current batch.
-
-        Returns:
-            float: The loss calculated during the validation step.
-        """
         x, y = batch
         logits = self(x)
         loss = self.test_criterion(logits, y)
@@ -273,15 +225,7 @@ class LUSModelLightningModule(pl.LightningModule):
         return loss
 
     def show_batch(self, win_size=(10, 10)):
-      """
-      Displays a batch of images along with their augmented versions.
 
-      Parameters:
-          win_size (tuple): The size of the window to display the images. Defaults to (10, 10).
-
-      Returns:
-          None
-      """
       def _to_vis(data):
           # Ensure that pixel values are in the valid range [0, 1]
           data = torch.clamp(data, 0, 1)
@@ -322,37 +266,3 @@ class LUSModelLightningModule(pl.LightningModule):
         # Print all layers and their requires_grad status
         for name, param in self.model.named_parameters():
             print(f'Parameter: {name}, Requires Gradient: {param.requires_grad}')
-            
-            
-# ----------------------------- Confusion Matrix ----------------------------- #
-
-    # def compute_confusion_matrix(self, y_true, y_pred):
-    #         cm = confusion_matrix(y_true, y_pred, labels=range(self.num_classes))
-    #         return cm
-
-    # def plot_confusion_matrix(self, cm, class_names):
-    #     plt.figure(figsize=(10, 8))
-    #     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
-    #     plt.xlabel("Predicted")
-    #     plt.ylabel("True")
-    #     plt.title("Confusion Matrix")
-    #     return plt
-
-    # def log_confusion_matrix(self, cm, class_names, step, logger):
-    #     fig = self.plot_confusion_matrix(cm, class_names)
-    #     logger.experiment.add_figure("Confusion Matrix", fig, global_step=step)
-
-    # def on_test_epoch_end(self, logits):
-    #     # Collect predictions and true labels from all batches in the test set
-    #     y_true = []
-    #     y_pred = []
-    #     for output in logits:
-    #         y_true.extend(output['y_true'].cpu().numpy())
-    #         y_pred.extend(output['y_pred'].cpu().numpy())
-
-    #     # Compute the confusion matrix
-    #     cm = self.compute_confusion_matrix(y_true, y_pred)
-
-    #     # Log the confusion matrix to TensorBoard
-    #     logger = self.logger  # Use your TensorBoard logger
-    #     self.log_confusion_matrix(cm, class_names=["no", "yellow", "orange", "red"], step=self.current_epoch, logger=logger)

@@ -49,6 +49,7 @@ parser.add_argument("--optimizer", type=str, default="sgd")
 parser.add_argument("--lr", type=float, default=0.0001)
 parser.add_argument("--weight_decay", type=float, default=0.001)
 parser.add_argument("--momentum", type=float, default=0.001)
+parser.add_argument("--label_smoothing", type=float, default=0.1)
 parser.add_argument("--max_epochs", type=int, default=1)
 parser.add_argument("--num_workers", type=int, default=4)
 parser.add_argument("--accumulate_grad_batches", type=int, default=4)
@@ -57,6 +58,7 @@ parser.add_argument("--disable_warnings", dest="disable_warnings", action='store
 parser.add_argument("--pretrained", dest="pretrained", action='store_true')
 parser.add_argument("--freeze_layers", type=str)
 parser.add_argument("--test", dest="test", action='store_true')
+parser.add_argument("--mixup", dest="mixup", action='store_true')
 
 # Add an argument for the configuration file
 parser.add_argument('--config', type=str, help='Path to JSON configuration file')
@@ -184,7 +186,8 @@ lus_data_module = LUSDataModule(train_dataset,
                                 test_dataset,
                                 val_dataset,
                                 args.num_workers, 
-                                args.batch_size)
+                                args.batch_size,
+                                args.mixup)
 # ---------------------------------------------------------------------------- #
 #                                 Class Weights                                #
 # ---------------------------------------------------------------------------- #
@@ -222,8 +225,10 @@ hyperparameters = {
   "num_classes": 4,
   "optimizer": args.optimizer,
   "lr": args.lr,
+  "batch_size": args.batch_size,
   "weight_decay": args.weight_decay,    
   "momentum": args.momentum,
+  "label_smoothing": args.label_smoothing,
 #   "class_weights": class_weights
 #   "configuration": configuration
 }
@@ -298,11 +303,6 @@ callbacks = [
             early_stop_callback,
             checkpoint_callback
             ]
-
-
-
-print("\n\nTRAINING MODEL...")
-print('=' * 80 + "\n")
 
 # Trainer args
 trainer_args = {
