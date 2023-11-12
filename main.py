@@ -59,6 +59,7 @@ parser.add_argument("--pretrained", dest="pretrained", action='store_true')
 parser.add_argument("--freeze_layers", type=str)
 parser.add_argument("--test", dest="test", action='store_true')
 parser.add_argument("--mixup", dest="mixup", action='store_true')
+parser.add_argument("--augmentation", dest="augmentation", action='store_true')
 
 # Add an argument for the configuration file
 parser.add_argument('--config', type=str, help='Path to JSON configuration file')
@@ -74,7 +75,7 @@ if args.config:
     with open(config_path, 'r') as f:
         configurations = json.load(f)
     for config in configurations:
-        if config['model'] == args.config:
+        if config['config'] == args.config:
             selected_config = config
             break
 
@@ -231,7 +232,8 @@ model = LUSModelLightningModule(model_name=args.model,
                                 hparams=hyperparameters,
                                 class_weights=weights_tensor,
                                 pretrained=args.pretrained,
-                                freeze_layers=freeze_layers)
+                                freeze_layers=freeze_layers,
+                                augmentation=args.augmentation)
 
 
 table_data = []
@@ -255,7 +257,7 @@ print('=' * 80)
 # -EarlyStopping
 early_stop_callback = EarlyStopping(
     monitor='validation_loss',
-    patience=10,
+    patience=20,
     strict=False,
     verbose=False,
     mode='min'

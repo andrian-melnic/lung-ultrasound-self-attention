@@ -11,7 +11,7 @@ from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
 from torchmetrics.classification import MulticlassF1Score, Accuracy
 
-from data_augmentation import DataAugmentation
+from DataAugmentation import DataAugmentation
 
 
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
@@ -22,8 +22,9 @@ class LUSModelLightningModule(pl.LightningModule):
                  model_name, 
                  hparams,
                  class_weights=None,
-                 pretrained=True,
-                 freeze_layers=None):
+                 freeze_layers=None,
+                 pretrained=False,
+                 augmentation=False):
         
         super(LUSModelLightningModule, self).__init__()
         
@@ -39,8 +40,10 @@ class LUSModelLightningModule(pl.LightningModule):
         }
         
         self.pretrained = pretrained
+        self.augmentation = augmentation
         self.freeze_layers = freeze_layers
         
+        print(f"Using augmentation: {self.augmentation}")
 # ----------------------------------- Model ---------------------------------- #
 
 # --------------------------------- BotNet18 --------------------------------- #
@@ -156,7 +159,11 @@ class LUSModelLightningModule(pl.LightningModule):
         
         
         scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.1),
+            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
+                                                                    mode='min', 
+                                                                    patience=10, 
+                                                                    factor=0.1,
+                                                                    verbose=True),
             'monitor': 'validation_loss',  # Monitor validation loss
             'verbose': True
         }
@@ -168,7 +175,7 @@ class LUSModelLightningModule(pl.LightningModule):
 
     def on_after_batch_transfer(self, batch, dataloader_idx):
         x, y = batch
-        if self.trainer.training:
+        if self.trainer.training and self.augmentation:
             x = self.transform(x)  # => we perform GPU/Batched data augmentation
         return x, y
       
