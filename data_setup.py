@@ -122,7 +122,7 @@ class HDF5Dataset(Dataset):
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset, transform=None):
+    def __init__(self, hdf5_dataset, pretrained=False):
         """
         Initialize the dataset.
 
@@ -130,8 +130,8 @@ class FrameTargetDataset(Dataset):
             hdf5_dataset (h5py.Dataset): The HDF5 dataset.
         """
         self.hdf5_dataset = hdf5_dataset
-        self.transform = transform
         self.resize_size = (224, 224)
+        self.pretrained = pretrained
         # self.resize_size = (256, 256)
 
     def __len__(self):
@@ -155,13 +155,13 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
-        # frame_tensor = self.pp_frames(frame_data)
-        image_mean = [0.485, 0.456, 0.406]
-        image_std = [0.229, 0.224, 0.225]
 
         frame_tensor = transforms.ToTensor()(frame_data)
         frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
-        # frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        if self.pretrained
+            image_mean = [0.485, 0.456, 0.406]
+            image_std = [0.229, 0.224, 0.225]
+            frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
         # frame_tensor = frame_tensor.float() / 255.0
         frame_tensor = frame_tensor.permute(0, 1, 2)
             
@@ -169,36 +169,8 @@ class FrameTargetDataset(Dataset):
         # target_data = torch.tensor(sum(target_data))
         target_data = int(target_data[()])
 
-        
-
         return frame_tensor, target_data
-    
-    def set_transform(self, transform):
-        self.transform = transform
 
-
-    # def pp_frames(self, frame_data):
-    #     """
-    #     Preprocess the frame data.
-
-    #     Args:
-    #         frame_data: The frame data.
-
-    #     Returns:
-    #         torch.Tensor: The preprocessed frame tensor.
-    #     """
-
-    #     size = (224, 224)
-    #     image_mean = [0.485, 0.456, 0.406]
-    #     image_std = [0.229, 0.224, 0.225]
-
-    #     frame_tensor = transforms.ToTensor()(frame_data)
-    #     frame_tensor = transforms.Resize(size)(frame_tensor)
-    #     frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
-
-    #     return 
-      
-      
 
 def _load_dsdata_pickle(dataset, pkl_file):
     # Check if the pickle file exists
