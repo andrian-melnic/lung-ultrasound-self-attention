@@ -164,9 +164,9 @@ if args.trim_data:
     test_indices = test_indices_trimmed
 
 
-train_dataset = FrameTargetDataset(train_subset)
-test_dataset = FrameTargetDataset(test_subset)
-val_dataset = FrameTargetDataset(val_subset)
+train_dataset = FrameTargetDataset(train_subset, args.pretrained)
+test_dataset = FrameTargetDataset(test_subset, args.pretrained)
+val_dataset = FrameTargetDataset(val_subset, args.pretrained)
  
 print(f"Train size: {len(train_dataset)}")
 print(f"Test size: {len(test_dataset)}")    
