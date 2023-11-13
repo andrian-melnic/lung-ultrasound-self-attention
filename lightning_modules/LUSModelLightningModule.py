@@ -162,7 +162,7 @@ class LUSModelLightningModule(pl.LightningModule):
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
                                                                     mode='min', 
                                                                     patience=10, 
-                                                                    factor=0.1,
+                                                                    factor=0.5,
                                                                     verbose=True),
             'monitor': 'validation_loss',  # Monitor validation loss
             'verbose': True

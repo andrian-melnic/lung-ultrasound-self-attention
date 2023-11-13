@@ -38,7 +38,7 @@ class LUSDataModule(pl.LightningDataModule):
         self.persistent_workers = True if num_workers > 0 else False
         
     def train_dataloader(self):
-        train_collate_fn = mixup_collate_fn if self.mixup else collate_fn
+        train_collate_fn = mixup_collate_fn if self.mixup==True else collate_fn
         print(f"Use MixUp augmentation: {self.mixup}")
         return DataLoader(self.train_dataset,
                           batch_size=self.batch_size,
