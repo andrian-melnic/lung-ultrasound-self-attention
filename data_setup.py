@@ -202,45 +202,45 @@ class FrameTargetDataset(Dataset):
 
 def _load_dsdata_pickle(dataset, pkl_file):
     # Check if the pickle file exists
-        if pkl_file and os.path.exists(pkl_file):
-            # If the pickle file exists, load the data from it
-            with open(pkl_file, 'rb') as f:
-                data = pickle.load(f)
-                medical_center_patients = data['medical_center_patients']
-                data_index = data['data_index']
-                data_map_idxs_pcm = data['data_map_idxs_pcm']
-                score_counts = data['score_counts']
-                labels = data['labels']
-        else:
-            # If the pickle file doesn't exist, create the data
-            medical_center_patients = defaultdict(set)
-            data_index = {}
-            data_map_idxs_pcm = defaultdict(list)
-            score_counts = defaultdict(int)
-            labels = []  # List to store target labels
+    if pkl_file and os.path.exists(pkl_file):
+        # If the pickle file exists, load the data from it
+        with open(pkl_file, 'rb') as f:
+            data = pickle.load(f)
+            medical_center_patients = data['medical_center_patients']
+            data_index = data['data_index']
+            data_map_idxs_pcm = data['data_map_idxs_pcm']
+            score_counts = data['score_counts']
+            labels = data['labels']
+    else:
+        # If the pickle file doesn't exist, create the data
+        medical_center_patients = defaultdict(set)
+        data_index = {}
+        data_map_idxs_pcm = defaultdict(list)
+        score_counts = defaultdict(int)
+        labels = []  # List to store target labels
 
-            for index, (_, _, target_data, patient, medical_center) in enumerate(tqdm(dataset)):
-                medical_center_patients[medical_center].add(patient)
-                data_index[index] = (patient, medical_center)
-                data_map_idxs_pcm[(patient, medical_center)].append(index)
-                score_counts[int(target_data[()])] += 1
-                labels.append(int(target_data[()]))
-            
-            # Save the data to a pickle file if pkl_file is provided
-            if pkl_file:
-                data = {
-                    'medical_center_patients': medical_center_patients,
-                    'data_index': data_index,
-                    'data_map_idxs_pcm': data_map_idxs_pcm,
-                    'score_counts': score_counts,
-                    'labels': labels
-                }
-                
-                with open(pkl_file, 'wb') as f:
-                    pickle.dump(data, f)
+        for index, (_, _, target_data, patient, medical_center) in enumerate(tqdm(dataset)):
+            medical_center_patients[medical_center].add(patient)
+            data_index[index] = (patient, medical_center)
+            data_map_idxs_pcm[(patient, medical_center)].append(index)
+            score_counts[int(target_data[()])] += 1
+            labels.append(int(target_data[()]))
         
-        return medical_center_patients, data_index, data_map_idxs_pcm, score_counts, labels
+        # Save the data to a pickle file if pkl_file is provided
+        if pkl_file:
+            data = {
+                'medical_center_patients': medical_center_patients,
+                'data_index': data_index,
+                'data_map_idxs_pcm': data_map_idxs_pcm,
+                'score_counts': score_counts,
+                'labels': labels
+            }
+            
+            with open(pkl_file, 'wb') as f:
+                pickle.dump(data, f)
     
+    return medical_center_patients, data_index, data_map_idxs_pcm, score_counts, labels 
+   
 def create_default_dict():
     return defaultdict(float)
 def initialize_inner_defaultdict():
@@ -295,31 +295,14 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
         # 0. Gather the metadata
         medical_center_patients, data_index, data_map_idxs_pcm, score_counts, labels = _load_dsdata_pickle(dataset, pkl_file)
 
-        # 1. Calculate the number of patients and frames for each medical center
-        frames_by_center = defaultdict(int)
-        frames_by_center_patient = defaultdict(initialize_inner_defaultdict)
-
-        for (patient, center) in data_index.values():
-            frames_by_center[center] += 1
-            frames_by_center_patient[center][patient] += 1
         
-        # 2. Calculate the target number of frames for each split
-        total_frames = sum(frames_by_center.values())
+         # 1. calculate the target number of frames for each split
+        total_frames = len(labels)
         train_frames = int(total_frames * train_ratio)
         val_frames = int(total_frames * val_ratio)
         test_frames = total_frames - train_frames - val_frames
-
-        # 3. Create a dictionary to track patient percentages for each center
-        patient_perc_by_center = defaultdict(create_default_dict)
-        for center, patients in medical_center_patients.items():
-            patients = list(patients)
-
-            for patient in patients:
-                patient_frames = frames_by_center_patient[center][patient]
-                patient_percentage = patient_frames / total_frames
-                patient_perc_by_center[center][patient] = patient_percentage
         
-        # 4. Splitting the dataset by patients taking into account frames ratio
+        # 2. Splitting the dataset by patients taking into account frames ratio
         # lists
         train_indices = []
         val_indices = []
@@ -330,94 +313,54 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
         val_patients_by_center = defaultdict(set)
         test_patients_by_center = defaultdict(set)
 
-        # 4.1 Test set
-        while len(test_indices) < test_frames:
-            center = random.choice(list(patient_perc_by_center.keys()))
-            patients = list(patient_perc_by_center[center].keys())
-            if patients:
-                patient = random.choice(patients)
-                if center in patient_perc_by_center and patient in patient_perc_by_center[center]:
-                    if len(test_indices) + patient_perc_by_center[center][patient] * total_frames <= test_frames:
-                        test_indices.extend(data_map_idxs_pcm[(patient, center)])
-                        test_patients_by_center[center].add(patient)
-                        del patient_perc_by_center[center][patient]
-                    else:
-                        # Se supera test_frames, cerca i pazienti rimasti che possono essere aggiunti per avvicinare il rapporto
-                        remaining_frames = test_frames - len(test_indices)
-                        candidates = [p for p in patients if patient_perc_by_center[center][p] * total_frames <= remaining_frames]
-                        if candidates:
-                            # Ordina i candidati in base a quanto si avvicinano al rapporto desiderato
-                            candidates = sorted(candidates, key=lambda p: abs((len(test_indices) + patient_perc_by_center[center][p] * total_frames) / test_frames - 1))
-                            
-                            for best_candidate in candidates:
-                                if len(test_indices) + patient_perc_by_center[center][best_candidate] * total_frames <= test_frames:
-                                    test_indices.extend(data_map_idxs_pcm[(best_candidate, center)])
-                                    test_patients_by_center[center].add(best_candidate)
-                                    del patient_perc_by_center[center][best_candidate]
-                        else:
-                            break
+    # 2.1 test set
+        while (len(test_indices) < test_frames):
+            center = random.choice(list(medical_center_patients.keys()))
+            patients = medical_center_patients[center]
+            try:
+                patient = patients.pop()
+                test_indices.extend(data_map_idxs_pcm[(patient, center)])
+                test_patients_by_center[center].add(patient)
+            except:
+                del medical_center_patients[center]
+            
+        # 2.2 validation set
+        while (len(val_indices) < val_frames):
+            center = random.choice(list(medical_center_patients.keys()))
+            patients = medical_center_patients[center]
+            try:
+                patient = patients.pop()
+                val_indices.extend(data_map_idxs_pcm[(patient, center)])
+                val_patients_by_center[center].add(patient)
+            except:
+                    del medical_center_patients[center]
 
-        # 4.2 Validation set
-        while len(val_indices) < val_frames:
-            center = random.choice(list(patient_perc_by_center.keys()))
-            patients = list(patient_perc_by_center[center].keys())
-            if patients:
-                patient = random.choice(patients)
-                if center in patient_perc_by_center and patient in patient_perc_by_center[center]:
-                    if len(val_indices) + patient_perc_by_center[center][patient] * total_frames <= val_frames:
-                        val_indices.extend(data_map_idxs_pcm[(patient, center)])
-                        val_patients_by_center[center].add(patient)
-                        del patient_perc_by_center[center][patient]
-                    else:
-                        # Se supera train_frames, cerca i pazienti rimasti che possono essere aggiunti per avvicinare il rapporto
-                        remaining_frames = val_frames - len(val_indices)
-                        candidates = [p for p in patients if patient_perc_by_center[center][p] * total_frames <= remaining_frames]
-                        if candidates:
-                            # Ordina i candidati in base a quanto si avvicinano al rapporto desiderato
-                            candidates = sorted(candidates, key=lambda p: abs((len(val_indices) + patient_perc_by_center[center][p] * total_frames) / val_frames - 1))
-                            
-                            for best_candidate in candidates:
-                                if len(val_indices) + patient_perc_by_center[center][best_candidate] * total_frames <= val_frames:
-                                    val_indices.extend(data_map_idxs_pcm[(best_candidate, center)])
-                                    val_patients_by_center[center].add(best_candidate)
-                                    del patient_perc_by_center[center][best_candidate]
-                        else:
-                            break
-        
-        # 4.3 Train set
-        for center in patient_perc_by_center:
-            for patient in patient_perc_by_center[center]:
+        # 2.3 training set
+        for center in list(medical_center_patients.keys()):
+            for patient in list(medical_center_patients[center]):
                 train_indices.extend(data_map_idxs_pcm[(patient, center)])
                 train_patients_by_center[center].add(patient)
         
-        # 5. Diagnostic checks and return values
+        # 3. Diagnostic checks and return values
         total_frames_calc = len(train_indices) + len(val_indices) + len(test_indices)
         if total_frames != total_frames_calc:
             print(f"dataset splitting gone wrong (expected: {total_frames}, got:{total_frames_calc})")
         
         # Sum up statistics info
         split_info = {
-            'medical_center_patients': medical_center_patients,
-            'frames_by_center': frames_by_center,
-            'train_patients_by_center': train_patients_by_center,
-            'val_patients_by_center': val_patients_by_center,
-            'test_patients_by_center': test_patients_by_center,
-            'frames_by_center_patient': frames_by_center_patient,
-            'score_counts': score_counts,
-            'labels': labels
-        }
-
-        train_idxs_p = round((len(train_indices) / len(dataset)) * 100)
-        val_idxs_p = round((len(val_indices) / len(dataset)) * 100)
-        test_idxs_p = 100 - (train_idxs_p + val_idxs_p)
+                'medical_center_patients': medical_center_patients,
+                'train_patients_by_center': train_patients_by_center,
+                'val_patients_by_center': val_patients_by_center,
+                'test_patients_by_center': test_patients_by_center,
+                'score_counts': score_counts,
+                'labels': labels
+            }
 
         if val_ratio == 0.0:
-            print(f"dataset split: train={len(train_indices)}({train_idxs_p}%), test={len(test_indices)}({test_idxs_p}%)")
+            print(f"Train size:{len(train_indices)}, Test Size:{len(test_indices)}")
             return train_indices, test_indices, split_info
         
-        print(f"dataset split: train={len(train_indices)}({train_idxs_p}%), val={len(val_indices)}({val_idxs_p}%), test={len(test_indices)}({test_idxs_p}%)")
-
-        
+        print(f"Train size: {len(train_indices)}, Val size: {len(val_indices)}, Test size: {len(test_indices)}")
         # Serialize the split data for future use
         print(f"\nSerializing splits...\n") 
         with open(split_info_filename, 'wb') as split_info_file:
@@ -428,8 +371,11 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
             pickle.dump(val_indices, val_indices_file)
         with open(test_indices_filename, 'wb') as test_indices_file:
             pickle.dump(test_indices, test_indices_file)
+            
+            
         return train_indices, val_indices, test_indices, split_info   
             
+ 
  
             
 def reduce_sets(seed, train, val=[], test=[], perc=1.0):
