@@ -8,82 +8,16 @@ import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
 from lightning.pytorch.loggers import TensorBoardLogger
-from sklearn.utils.class_weight import compute_class_weight
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
 from tabulate import tabulate
-from torch.utils.data import Subset
+
 from lightning.pytorch.tuner import Tuner
 
-import json
+from args_processing import parse_arguments
+from get_sets import get_sets, get_class_weights
 
-# ------------------------------ Parse arguments ----------------------------- #
-
-# Parse command-line arguments
-parser = ArgumentParser()
-
-allowed_models = ["google_vit", 
-                  "resnet18",
-                  "resnet50",
-                  "beit", 
-                  'timm_bot', 
-                  "botnet18", 
-                  "botnet50",
-                  "vit",
-                  "swin_vit",
-                  "simple_vit"]
-
-allowed_modes = ["train", "test", "train_test"]
-parser.add_argument("--model", type=str, choices=allowed_models)
-parser.add_argument("--mode", type=str, choices=allowed_modes)
-parser.add_argument("--version", type=str)
-parser.add_argument("--working_dir_path", type=str)
-parser.add_argument("--dataset_h5_path", type=str)
-parser.add_argument("--hospitaldict_path", type=str)
-parser.add_argument("--trim_data", type=float)
-parser.add_argument("--chkp", type=str)
-parser.add_argument("--rseed", type=int)
-parser.add_argument("--train_ratio", type=float, default=0.7)
-parser.add_argument("--batch_size", type=int, default=90)
-parser.add_argument("--optimizer", type=str, default="sgd")
-parser.add_argument("--lr", type=float, default=0.0001)
-parser.add_argument("--weight_decay", type=float, default=0.001)
-parser.add_argument("--momentum", type=float, default=0.001)
-parser.add_argument("--label_smoothing", type=float, default=0.1)
-parser.add_argument("--max_epochs", type=int, default=1)
-parser.add_argument("--num_workers", type=int, default=4)
-parser.add_argument("--accumulate_grad_batches", type=int, default=4)
-parser.add_argument("--precision", default=32)
-parser.add_argument("--disable_warnings", dest="disable_warnings", action='store_true')
-parser.add_argument("--pretrained", dest="pretrained", action='store_true')
-parser.add_argument("--freeze_layers", type=str)
-parser.add_argument("--test", dest="test", action='store_true')
-parser.add_argument("--mixup", dest="mixup", action='store_true')
-
-# Add an argument for the configuration file
-parser.add_argument('--config', type=str, help='Path to JSON configuration file')
-
-args = parser.parse_args()
-
-# -------------------------------- json config ------------------------------- #
-
-config_path = 'configs/configs.json'
-selected_config = None
-# If a configuration file was provided, load it
-if args.config:
-    with open(config_path, 'r') as f:
-        configurations = json.load(f)
-    for config in configurations:
-        if config['model'] == args.config:
-            selected_config = config
-            break
-
-    # Override the command-line arguments with the configuration file
-    for key, value in selected_config.items():
-        if hasattr(args, key):
-            setattr(args, key, value)
-
-print(f"args are: {args}")
+args = parse_arguments()
 
 print("\n" + "-"*80 + "\n")
 pl.seed_everything(args.rseed)
@@ -126,87 +60,23 @@ from lightning_modules.LUSDataModule import LUSDataModule
 
 # ---------------------------------- Dataset --------------------------------- #
 
-dataset = HDF5Dataset(args.dataset_h5_path)
+sets, split_info = get_sets(
+    args.rseed,
+    data_file,
+    args.hospitaldict_path,
+    args.train_ratio,
+    args.trim_data
+)
 
-train_indices = []
-val_indices = []
-test_indices = []
-
-train_ratio = args.train_ratio
-test_ratio = (1 - train_ratio)/2
-val_ratio = test_ratio
-ratios = [train_ratio, test_ratio, val_ratio]
-
-
-def create_default_dict():
-    return defaultdict(float)
-def initialize_inner_defaultdict():
-    return defaultdict(int)
-
-print(f"Split ratios: {ratios}")
-train_indices, val_indices, test_indices, split_info = split_dataset(
-    rseed=args.rseed,
-    dataset=dataset,
-    pkl_file=args.hospitaldict_path,
-    ratios=ratios)
-
-# Create training and test subsets
-train_subset = Subset(dataset, train_indices)
-test_subset = Subset(dataset, test_indices)  
-val_subset = Subset(dataset, val_indices)  
-
-
-if args.trim_data:
-    train_indices_trimmed, \
-    val_indices_trimmed, \
-    test_indices_trimmed = reduce_sets(args.rseed,
-                                       train_subset,
-                                       val_subset,
-                                       test_subset,
-                                       args.trim_data)
-    
-    train_subset = Subset(dataset, train_indices_trimmed)
-    test_subset = Subset(dataset, test_indices_trimmed)
-    val_subset = Subset(dataset, val_indices_trimmed)
-    
-    train_indices = train_indices_trimmed
-    val_indices = val_indices_trimmed
-    test_indices = test_indices_trimmed
-
-
-train_dataset = FrameTargetDataset(train_subset)
-test_dataset = FrameTargetDataset(test_subset)
-val_dataset = FrameTargetDataset(val_subset)
- 
-print(f"Train size: {len(train_dataset)}")
-print(f"Test size: {len(test_dataset)}")    
-print(f"Validation size: {len(val_dataset)}")    
-
-lus_data_module = LUSDataModule(train_dataset, 
-                                test_dataset,
-                                val_dataset,
+lus_data_module = LUSDataModule(sets["train"], 
+                                sets["test"],
+                                sets["val"],
                                 args.num_workers, 
                                 args.batch_size,
                                 args.mixup)
-# ---------------------------------------------------------------------------- #
-#                                 Class Weights                                #
-# ---------------------------------------------------------------------------- #
-# Retrieves the dataset's labels
-ds_labels = split_info['labels']
-
-# Extract the train and test set labels
-y_train_labels = np.array(ds_labels)[train_indices]
-# y_test_labels = np.array(ds_labels)[test_indices]
-
-# Calculate class balance using 'compute_class_weight'
-class_weights = compute_class_weight('balanced', 
-                                     classes=np.unique(y_train_labels), 
-                                     y=y_train_labels)
-
-weights_tensor = torch.Tensor(class_weights)
-print("Class Weights: ", class_weights)
 
 
+train_weight_tensor = get_class_weights(sets["train_indices"], split_info)
 # ---------------------------------------------------------------------------- #
 #                         Model & trainer configuration                        #
 # ---------------------------------------------------------------------------- #
@@ -240,7 +110,7 @@ if args.pretrained:
         freeze_layers = args.freeze_layers
 model = LUSModelLightningModule(model_name=args.model, 
                                 hparams=hyperparameters,
-                                class_weights=weights_tensor,
+                                class_weights=train_weight_tensor,
                                 pretrained=args.pretrained,
                                 freeze_layers=freeze_layers)
 
