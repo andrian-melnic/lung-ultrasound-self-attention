@@ -22,15 +22,17 @@ class DataAugmentation(nn.Module):
         #     K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
         # )
         self.transforms = torch.nn.Sequential(
-            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.3), p=0.3),
-            K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.3),
-            K.RandomResizedCrop(size=(224,224), scale=(0.5, 1.0), p=0.3),
-            K.RandomContrast(contrast=(0.7, 1), p=0.3),
-            K.RandomGamma(gamma=(0.7, 1.5), gain=(0.8, 1.2), p=0.3),
-            K.RandomGaussianBlur((3, 3), (0.7, 1.2), p=0.3),
-            K.RandomHorizontalFlip(p=0.3),
-            K.RandomVerticalFlip(p=0.3)
+            K.RandomAffine(degrees=(-23, 23), scale=(1, 1.5), p=0.5),
+            K.RandomRotation(degrees=(-23, 23), p=0.5),
+            # K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.5),
+            # K.RandomResizedCrop(size=(224,224), scale=(0.5, 1.0), p=0.3),
+            K.RandomContrast(contrast=(0.7, 1.8), p=0.5),
+            K.RandomGamma(gamma=(0.9, 1.8), gain=(0.9, 1.8), p=0.5),
+            K.RandomGaussianBlur((3, 3), (1, 1.5), p=0.3),
+            K.RandomHorizontalFlip(p=0.5),
+            # K.RandomVerticalFlip(p=0.3)
         )
+        print(self.transforms)
 
     @torch.no_grad()  # disable gradients for efficiency
     def forward(self, x):

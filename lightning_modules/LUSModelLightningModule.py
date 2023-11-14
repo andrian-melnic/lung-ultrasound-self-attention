@@ -43,7 +43,6 @@ class LUSModelLightningModule(pl.LightningModule):
         self.augmentation = augmentation
         self.freeze_layers = freeze_layers
         
-        print(f"Using augmentation: {self.augmentation}")
 # ----------------------------------- Model ---------------------------------- #
 
 # --------------------------------- BotNet18 --------------------------------- #
@@ -63,10 +62,10 @@ class LUSModelLightningModule(pl.LightningModule):
 
 # --------------------------------- resnet --------------------------------- #
         if "resnet" in model_name:
-            print("\nUsing pretrained weights {selfpretrained}\n")
+            print(f"\nUsing pretrained weights {self.pretrained}\n")
                 
-            self.model = timm.create_model("{model_name}.a1_in1k",
-                                            pretrained={selfpretrained},
+            self.model = timm.create_model(f"{model_name}.a1_in1k",
+                                            pretrained=self.pretrained,
                                             num_classes=self.num_classes)
             if self.pretrained:
                 # List of layers to exclude from freezing
@@ -76,7 +75,7 @@ class LUSModelLightningModule(pl.LightningModule):
             
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
-            print("\nUsing pretrained weights {selfpretrained}\n")
+            print("\nUsing pretrained weights {self.pretrained}\n")
 
             self.model = timm.create_model('botnet26t_256.c1_in1k',
                                            pretrained=self.pretrained,
@@ -125,7 +124,7 @@ class LUSModelLightningModule(pl.LightningModule):
         self.save_hyperparameters(ignore=['class_weights'])
         
 # ------------------------------ Data processing ----------------------------- #
-
+        print(f"Using augmentation: {self.augmentation}")
         self.transform = DataAugmentation()
         
 # ---------------------------------- Metrics --------------------------------- #
@@ -139,6 +138,7 @@ class LUSModelLightningModule(pl.LightningModule):
         self.val_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
         self.test_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
 
+        
 # ------------------------------ Methods & Hooks ----------------------------- #
     def configure_optimizers(self):
         if self.optimizer_name == "adam":
