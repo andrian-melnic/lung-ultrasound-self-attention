@@ -63,10 +63,10 @@ class LUSModelLightningModule(pl.LightningModule):
 
 # --------------------------------- resnet --------------------------------- #
         if "resnet" in model_name:
-            print("\nUsing pretrained weights {selfpretrained}\n")
+            print(f"\nUsing pretrained weights {self.pretrained}\n")
                 
-            self.model = timm.create_model("{model_name}.a1_in1k",
-                                            pretrained={selfpretrained},
+            self.model = timm.create_model(f"{model_name}.a1_in1k",
+                                            pretrained=self.pretrained,
                                             num_classes=self.num_classes)
             if self.pretrained:
                 # List of layers to exclude from freezing
@@ -76,7 +76,7 @@ class LUSModelLightningModule(pl.LightningModule):
             
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
-            print("\nUsing pretrained weights {selfpretrained}\n")
+            print(f"\nUsing pretrained weights {self.pretrained}\n")
 
             self.model = timm.create_model('botnet26t_256.c1_in1k',
                                            pretrained=self.pretrained,
@@ -263,7 +263,7 @@ class LUSModelLightningModule(pl.LightningModule):
                 param.requires_grad = True  
                 
     def freeze_layers_with_name(self):
-        print("Freezing all layers with {self.freeze_layers} in name")
+        print(f"Freezing all layers with {self.freeze_layers} in name")
         for name, param in self.model.named_parameters():
             if self.freeze_layers in name:
                 param.requires_grad = False
