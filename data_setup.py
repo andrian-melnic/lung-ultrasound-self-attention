@@ -158,10 +158,10 @@ class FrameTargetDataset(Dataset):
 
         frame_tensor = transforms.ToTensor()(frame_data)
         frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
-        if self.pretrained
-            image_mean = [0.485, 0.456, 0.406]
-            image_std = [0.229, 0.224, 0.225]
-            frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
+        # if self.pretrained:
+        #     image_mean = [0.485, 0.456, 0.406]
+        #     image_std = [0.229, 0.224, 0.225]
+        #     frame_tensor = transforms.Normalize(mean=image_mean, std=image_std)(frame_tensor)
         # frame_tensor = frame_tensor.float() / 255.0
         frame_tensor = frame_tensor.permute(0, 1, 2)
             
