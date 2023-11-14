@@ -32,13 +32,11 @@ class LUSModelLightningModule(pl.LightningModule):
 
         
         self.num_classes = hparams['num_classes']
-        
-        self.optim = {
-            "lr": hparams['lr'],
-            "weight_decay": hparams['weight_decay'],
-            "momentum": hparams['momentum']
-        }
-        
+    
+        self.lr = hparams['lr']
+        self.weight_decay = hparams['weight_decay']
+        self.momentum = hparams['momentum']
+        self.label_smoothing = hparams['label_smoothing']
         self.pretrained = pretrained
         self.augmentation = augmentation
         self.freeze_layers = freeze_layers
@@ -120,8 +118,8 @@ class LUSModelLightningModule(pl.LightningModule):
 # ------------------------------------ HP ------------------------------------ #
 
         self.optimizer_name = str(hparams['optimizer']).lower()
-        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=hparams['label_smoothing'])
-        self.test_criterion = nn.CrossEntropyLoss(label_smoothing=hparams['label_smoothing'])
+        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=self.label_smoothing)
+        self.test_criterion = nn.CrossEntropyLoss(label_smoothing=self.label)
         self.save_hyperparameters(ignore=['class_weights'])
         
 # ------------------------------ Data processing ----------------------------- #
@@ -143,17 +141,17 @@ class LUSModelLightningModule(pl.LightningModule):
     def configure_optimizers(self):
         if self.optimizer_name == "adam":
             optimizer = torch.optim.Adam(self.parameters(),
-                                              lr=self.optim["lr"],
-                                              weight_decay=self.optim["weight_decay"])
+                                              lr=self.lr,
+                                              weight_decay=self.weight_decay)
         if self.optimizer_name == "adamw":
             optimizer = torch.optim.AdamW(self.parameters(),
-                                              lr=self.optim["lr"],
-                                              weight_decay=self.optim["weight_decay"])
+                                              lr=self.lr,
+                                              weight_decay=self.weight_decay)
         elif self.optimizer_name == "sgd":
             optimizer = torch.optim.SGD(self.parameters(),
-                                             lr=self.optim["lr"],
-                                             momentum=self.optim["momentum"],
-                                             weight_decay=self.optim["weight_decay"])
+                                             lr=self.lr,
+                                             momentum=self.momentum,
+                                             weight_decay=self.weight_decay)
         else:
             raise ValueError("Invalid optimizer name. Please choose either 'adam' or 'sgd'.")
         
