@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from pytorch_lightning import LightningModule, Trainer
-from pytorch_lightning.callbacks import ModelCheckpoint
+from lightning.pytorch import lightning.pytorchModule, Trainer
+from lightning.pytorch.callbacks import ModelCheckpoint
 import timm
 from torchmetrics import Accuracy
 from torchvision.datasets import CIFAR10

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchmetrics import Accuracy
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 class MHSA(nn.Module):
     def __init__(self, n_dims, width=14, height=14, heads=4):

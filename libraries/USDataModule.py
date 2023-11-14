@@ -1,4 +1,4 @@
-import lightning_pytorch as pl
+import lightning.pytorch_pytorch as pl
 import torch
 from torch.utils.data import random_split, DataLoader
 import h5py
