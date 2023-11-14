@@ -22,17 +22,18 @@
         "--freeze_layers", "mlp",
         "--batch_size", "16",
         "--optimizer", "sgd",
-        "--lr","0.001",
+        "--lr","0.004",
         "--weight_decay", " 0.0001",
         "--momentum", "0.9",
         "--max_epochs", "100",
         "--num_workers", "0",
         "--accumulate_grad_batches", "4",
-        "--accelerator", "gpu",
+        // "--accelerator", "gpu",
         "--precision", "32",
         "--disable_warnings",
         // "--chkp", "C:/Users/andri/Progetti/lus-dl-framework/checkpoints/trimmed_vit/sgd/ds_0.6_lr0.01_bs16/epoch=49-validation_loss=0.1290.ckpt"
-        "--chkp", "last"
+        // "--chkp", "last"
+        "--augmentation"
       ]
     },
     {

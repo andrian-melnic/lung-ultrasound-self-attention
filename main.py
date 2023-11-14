@@ -3,7 +3,7 @@ import os
 import glob
 import pickle
 import torch
-import lightning as pl
+import lightning.pytorch as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
@@ -23,17 +23,6 @@ print("\n" + "-"*80 + "\n")
 pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
 
-if torch.cuda.is_available():
-    dev = torch.cuda.get_device_name()
-    accelerator = "gpu"
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    
-elif torch.backends.mps.is_built():
-    accelerator="mps"
-    dev = "mps"  
-    torch.set_default_device(f"{dev}")
-else:
-    dev = "cpu"
 
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
@@ -112,7 +101,8 @@ model = LUSModelLightningModule(model_name=args.model,
                                 hparams=hyperparameters,
                                 class_weights=train_weight_tensor,
                                 pretrained=args.pretrained,
-                                freeze_layers=freeze_layers)
+                                freeze_layers=freeze_layers,
+                                augmentation=args.augmentation)
 
 
 table_data = []
@@ -136,7 +126,7 @@ print('=' * 80)
 # -EarlyStopping
 early_stop_callback = EarlyStopping(
     monitor='validation_loss',
-    patience=10,
+    patience=20,
     strict=False,
     verbose=False,
     mode='min'
@@ -200,7 +190,7 @@ trainer = Trainer(**trainer_args,
                 #   val_check_interval=0.25,
                 #   gradient_clip_val=0.1,
                     # benchmark=True,
-                    accelerator=accelerator,
+                    accelerator="gpu",
                     default_root_dir = checkpoint_dir)
 
 # Trainer tuner

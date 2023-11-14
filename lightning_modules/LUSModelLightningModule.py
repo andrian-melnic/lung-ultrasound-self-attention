@@ -11,7 +11,7 @@ from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
 from torchmetrics.classification import MulticlassF1Score, Accuracy
 
-from data_augmentation import DataAugmentation
+from DataAugmentation import DataAugmentation
 
 
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
@@ -22,8 +22,9 @@ class LUSModelLightningModule(pl.LightningModule):
                  model_name, 
                  hparams,
                  class_weights=None,
-                 pretrained=True,
-                 freeze_layers=None):
+                 freeze_layers=None,
+                 pretrained=False,
+                 augmentation=False):
         
         super(LUSModelLightningModule, self).__init__()
         
@@ -39,8 +40,10 @@ class LUSModelLightningModule(pl.LightningModule):
         }
         
         self.pretrained = pretrained
+        self.augmentation = augmentation
         self.freeze_layers = freeze_layers
         
+        print(f"Using augmentation: {self.augmentation}")
 # ----------------------------------- Model ---------------------------------- #
 
 # --------------------------------- BotNet18 --------------------------------- #
@@ -156,7 +159,11 @@ class LUSModelLightningModule(pl.LightningModule):
         
         
         scheduler = {
-            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=5, factor=0.1),
+            'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
+                                                                    mode='min', 
+                                                                    patience=10, 
+                                                                    factor=0.5,
+                                                                    verbose=True),
             'monitor': 'validation_loss',  # Monitor validation loss
             'verbose': True
         }
@@ -168,7 +175,7 @@ class LUSModelLightningModule(pl.LightningModule):
 
     def on_after_batch_transfer(self, batch, dataloader_idx):
         x, y = batch
-        if self.trainer.training:
+        if self.trainer.training and self.augmentation:
             x = self.transform(x)  # => we perform GPU/Batched data augmentation
         return x, y
       
@@ -179,21 +186,20 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         loss = self.train_criterion(logits, y)
         self.train_acc(logits, y)
-        self.train_f1(logits, y)
+        # self.train_f1(logits, y)
         self.log('training_loss', loss, 
                  prog_bar=True,
                  on_epoch=True,
                  logger=True,
                  on_step=False)
-        self.log('training_accuracy', self.train_acc(logits, y), 
-                 prog_bar=True,
+        self.log('training_accuracy', self.train_acc(logits, y),
                  on_epoch=True,
                  logger=True,
                  on_step=False)
-        # self.log('training_f1', self.train_f1(logits, y), 
-        #          prog_bar=True,
+        # self.log('training_f1', self.train_f1(logits, y),
         #          on_epoch=True,
-        #          logger=True)
+        #          logger=True,
+        #          on_step=False)
         return loss
 
 
@@ -208,8 +214,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.test_f1(logits, y)
         
         self.log('test_loss', loss, prog_bar=True)
-        self.log('test_acc', self.test_acc(logits, y), prog_bar=True)
-        self.log('test_f1', self.test_f1(logits, y), prog_bar=True)
+        self.log('test_acc', self.test_acc(logits, y))
+        self.log('test_f1', self.test_f1(logits, y))
         return loss, logits
     
     def validation_step(self, batch, batch_idx):
@@ -220,8 +226,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.val_acc(logits, y)
         self.val_f1(logits, y)
         self.log('validation_loss', loss, prog_bar=True)
-        self.log('validation_acc', self.val_acc(logits, y), prog_bar=True)
-        self.log('validation_f1', self.val_f1(logits, y), prog_bar=True)
+        self.log('validation_acc', self.val_acc(logits, y))
+        self.log('validation_f1', self.val_f1(logits, y))
         return loss
 
     def show_batch(self, win_size=(10, 10)):
