@@ -115,7 +115,7 @@ class LUSModelLightningModule(pl.LightningModule):
             #         emb_dropout = 0.1
             #     )
 # ------------------------------------ HP ------------------------------------ #
-
+        print(f"\nModel summary:\n{self.model}")
         self.optimizer_name = str(hparams['optimizer']).lower()
         self.weighted_cross_entropy = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=self.label_smoothing)
         self.cross_entropy = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
@@ -182,8 +182,8 @@ class LUSModelLightningModule(pl.LightningModule):
 
         x, y = batch
         logits = self(x)
-        # loss = self.weighted_cross_entropy(logits, y)
-        loss = self.cross_entropy(logits, y)
+        loss = self.weighted_cross_entropy(logits, y)
+        # loss = self.cross_entropy(logits, y)
         self.train_acc(logits, y)
         # self.train_f1(logits, y)
         self.log('training_loss', loss, 
