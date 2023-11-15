@@ -222,12 +222,12 @@ class LUSModelLightningModule(pl.LightningModule):
                         on_epoch=True,
                         logger=True,
                         on_step=True,
-                        prog_bar=True))
+                        prog_bar=True)
         self.log('test_f1', self.test_f1(logits, y),
                         on_epoch=True,
                         logger=True,
                         on_step=True,
-                        prog_bar=True))
+                        prog_bar=True)
         return loss, logits
     
     def validation_step(self, batch, batch_idx):
