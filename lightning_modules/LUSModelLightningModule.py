@@ -117,8 +117,8 @@ class LUSModelLightningModule(pl.LightningModule):
 # ------------------------------------ HP ------------------------------------ #
 
         self.optimizer_name = str(hparams['optimizer']).lower()
-        self.train_criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=self.label_smoothing)
-        self.test_criterion = nn.CrossEntropyLoss(label_smoothing=self.label)
+        self.weighted_cross_entropy = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=self.label_smoothing)
+        self.cross_entropy = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
         self.save_hyperparameters(ignore=['class_weights'])
         
 # ------------------------------ Data processing ----------------------------- #
@@ -143,7 +143,7 @@ class LUSModelLightningModule(pl.LightningModule):
             optimizer = torch.optim.Adam(self.parameters(),
                                               lr=self.lr,
                                               weight_decay=self.weight_decay)
-        if self.optimizer_name == "adamw":
+        elif self.optimizer_name == "adamw":
             optimizer = torch.optim.AdamW(self.parameters(),
                                               lr=self.lr,
                                               weight_decay=self.weight_decay)
@@ -182,18 +182,20 @@ class LUSModelLightningModule(pl.LightningModule):
 
         x, y = batch
         logits = self(x)
-        loss = self.train_criterion(logits, y)
+        # loss = self.weighted_cross_entropy(logits, y)
+        loss = self.cross_entropy(logits, y)
         self.train_acc(logits, y)
         # self.train_f1(logits, y)
         self.log('training_loss', loss, 
                  prog_bar=True,
                  on_epoch=True,
                  logger=True,
-                 on_step=False)
+                 on_step=True)
         self.log('training_accuracy', self.train_acc(logits, y),
                  on_epoch=True,
                  logger=True,
-                 on_step=False)
+                 on_step=True,
+                 prog_bar=True)
         # self.log('training_f1', self.train_f1(logits, y),
         #          on_epoch=True,
         #          logger=True,
@@ -206,26 +208,41 @@ class LUSModelLightningModule(pl.LightningModule):
 
         x, y = batch
         logits = self(x)
-        loss = self.test_criterion(logits, y)
+        loss = self.cross_entropy(logits, y)
         
         self.test_acc(logits, y)
         self.test_f1(logits, y)
         
-        self.log('test_loss', loss, prog_bar=True)
-        self.log('test_acc', self.test_acc(logits, y))
-        self.log('test_f1', self.test_f1(logits, y))
+        self.log('test_loss', loss, 
+                        on_epoch=True,
+                        logger=True,
+                        on_step=True,
+                        prog_bar=True)
+        self.log('test_acc', self.test_acc(logits, y),
+                        on_epoch=True,
+                        logger=True,
+                        on_step=True,
+                        prog_bar=True))
+        self.log('test_f1', self.test_f1(logits, y),
+                        on_epoch=True,
+                        logger=True,
+                        on_step=True,
+                        prog_bar=True))
         return loss, logits
     
     def validation_step(self, batch, batch_idx):
 
         x, y = batch
         logits = self(x)
-        loss = self.test_criterion(logits, y)
+        loss = self.cross_entropy(logits, y)
         self.val_acc(logits, y)
         self.val_f1(logits, y)
-        self.log('validation_loss', loss, prog_bar=True)
+        self.log('validation_loss', loss, 
+                 prog_bar=True, 
+                 on_step=True, 
+                 on_epoch=True)
         self.log('validation_acc', self.val_acc(logits, y))
-        self.log('validation_f1', self.val_f1(logits, y))
+        # self.log('validation_f1', self.val_f1(logits, y))
         return loss
 
     def show_batch(self, win_size=(10, 10)):
