@@ -47,7 +47,7 @@ class LUSDataModule(pl.LightningDataModule):
                           persistent_workers=self.persistent_workers,
                           collate_fn=train_collate_fn,
                           drop_last=True,
-                        #   shuffle=True
+                          shuffle=True
                           )
 
     def val_dataloader(self):
