@@ -5,7 +5,8 @@ import timm
 import lightning.pytorch as pl
 from kornia import tensor_to_image
 import matplotlib.pyplot as plt
-from torchvision.models import resnet18, ResNet18_Weights
+from torchvision import models
+from torchvision.models import resnet18, ResNet18_Weights, resnet50, ResNet50_Weights
 from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
@@ -47,29 +48,50 @@ class LUSModelLightningModule(pl.LightningModule):
         if model_name == "botnet50":
             self.model = BotNet("bottleneck",
                                  [3, 4, 6, 3], 
-                                  num_classes=4, 
+                                  num_classes=self.num_classes, 
                                   resolution=(224, 224), 
                                   heads=4)
             
         elif model_name == "botnet18":
             self.model = BotNet("basic",
                                   [2, 2, 2, 2], 
-                                  num_classes=4, 
+                                  num_classes=self.num_classes, 
                                   resolution=(224, 224), 
                                   heads=4)
 
 # --------------------------------- resnet --------------------------------- #
-        if "resnet" in model_name:
+        if "resnet18" in model_name:
+            self.model = models.resnet18(pretrained=pretrained)
+            self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
             print(f"\nUsing pretrained weights {self.pretrained}\n")
-                
-            self.model = timm.create_model(f"{model_name}.a1_in1k",
-                                            pretrained=self.pretrained,
-                                            num_classes=self.num_classes)
             if self.pretrained:
                 # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
                 self.print_layers_req_grad()
+                
+        elif "resnet50" in model_name:
+            self.model = models.resnet50(pretrained=pretrained)
+            self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
+            print(f"\nUsing pretrained weights {self.pretrained}\n")
+            if self.pretrained:
+                # List of layers to exclude from freezing
+                excluded_layers = ['fc', 'layer3', 'layer4']
+                self.freeze_layers_with_exclusion(excluded_layers)
+                self.print_layers_req_grad()
+                
+                
+        # if "resnet" in model_name    
+            # torch image models resnet18/50
+            # self.model = timm.create_model(f"{model_name}.a1_in1k",
+            #                                 pretrained=self.pretrained,
+            #                                 num_classes=self.num_classes)
+            # print(f"\nUsing pretrained weights {self.pretrained}\n")
+            # if self.pretrained:
+            #     # List of layers to exclude from freezing
+            #     excluded_layers = ['fc', 'layer3', 'layer4']
+            #     self.freeze_layers_with_exclusion(excluded_layers)
+            #     self.print_layers_req_grad()
             
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
@@ -116,9 +138,13 @@ class LUSModelLightningModule(pl.LightningModule):
             #     )
 # ------------------------------------ HP ------------------------------------ #
 
+        print(f"\nModel summary:\n{self.model}")
+        
         self.optimizer_name = str(hparams['optimizer']).lower()
-        self.weighted_cross_entropy = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=self.label_smoothing)
-        self.cross_entropy = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
+        
+        self.weighted_cross_entropy = nn.CrossEntropyLoss(weight=class_weights)
+        self.cross_entropy = nn.CrossEntropyLoss()
+        
         self.save_hyperparameters(ignore=['class_weights'])
         
 # ------------------------------ Data processing ----------------------------- #
@@ -162,7 +188,7 @@ class LUSModelLightningModule(pl.LightningModule):
                                                                     patience=10, 
                                                                     factor=0.5,
                                                                     verbose=True),
-            'monitor': 'validation_loss',  # Monitor validation loss
+            'monitor': 'val_loss',  # Monitor validation loss
             'verbose': True
         }
         
@@ -182,69 +208,44 @@ class LUSModelLightningModule(pl.LightningModule):
 
         x, y = batch
         logits = self(x)
-        # loss = self.weighted_cross_entropy(logits, y)
-        loss = self.cross_entropy(logits, y)
-        self.train_acc(logits, y)
-        # self.train_f1(logits, y)
-        self.log('training_loss', loss, 
-                 prog_bar=True,
-                 on_epoch=True,
-                 logger=True,
-                 on_step=True)
-        self.log('training_accuracy', self.train_acc(logits, y),
-                 on_epoch=True,
-                 logger=True,
-                 on_step=True,
-                 prog_bar=True)
-        # self.log('training_f1', self.train_f1(logits, y),
-        #          on_epoch=True,
-        #          logger=True,
-        #          on_step=False)
+        
+        loss = self.weighted_cross_entropy(logits, y)
+        # loss = self.cross_entropy(logits, y)
+        acc = self.train_acc(logits, y)
+        # f1 = self.train_f1(logits, y)
+        
+        self.log('train_loss', loss, prog_bar=True, on_epoch=True)
+        self.log('train_acc', acc)
+        # self.log('train_f1', f1, on_epoch=True, logger=True, on_step=False)
         return loss
 
+    def validation_step(self, batch, batch_idx):
 
+        x, y = batch
+        logits = self(x)
+        
+        loss = self.cross_entropy(logits, y)
+        acc = self.val_acc(logits, y)
+        # f1 = self.val_f1(logits, y)
+        
+        self.log('val_loss', loss, prog_bar=True, on_epoch=True)
+        self.log('val_acc', acc)
+        # self.log('val_f1', f1)
 
     def test_step(self, batch, batch_idx):
 
         x, y = batch
         logits = self(x)
+        
         loss = self.cross_entropy(logits, y)
+        acc = self.test_acc(logits, y)
+        f1 = self.test_f1(logits, y)
         
-        self.test_acc(logits, y)
-        self.test_f1(logits, y)
-        
-        self.log('test_loss', loss, 
-                        on_epoch=True,
-                        logger=True,
-                        on_step=True,
-                        prog_bar=True)
-        self.log('test_acc', self.test_acc(logits, y),
-                        on_epoch=True,
-                        logger=True,
-                        on_step=True,
-                        prog_bar=True)
-        self.log('test_f1', self.test_f1(logits, y),
-                        on_epoch=True,
-                        logger=True,
-                        on_step=True,
-                        prog_bar=True)
-        return loss, logits
+        self.log('test_loss', loss, on_epoch=True, prog_bar=True)
+        self.log('test_acc', acc, on_epoch=True, prog_bar=True)
+        self.log('test_f1', f1, on_epoch=True, prog_bar=True)
     
-    def validation_step(self, batch, batch_idx):
-
-        x, y = batch
-        logits = self(x)
-        loss = self.cross_entropy(logits, y)
-        self.val_acc(logits, y)
-        self.val_f1(logits, y)
-        self.log('validation_loss', loss, 
-                 prog_bar=True, 
-                 on_step=True, 
-                 on_epoch=True)
-        self.log('validation_acc', self.val_acc(logits, y))
-        # self.log('validation_f1', self.val_f1(logits, y))
-        return loss
-
+        
     def show_batch(self, win_size=(10, 10)):
 
       def _to_vis(data):

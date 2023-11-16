@@ -91,7 +91,7 @@ class ViTLightningModule(pl.LightningModule):
         logits = self(x)
         loss = nn.functional.cross_entropy(logits, y)
         self.val_acc(logits, y)
-        self.log('validation_loss', loss, prog_bar=True)
+        self.log('val_loss', loss, prog_bar=True)
         self.log('validation_acc', self.val_acc, prog_bar=True)
         
 

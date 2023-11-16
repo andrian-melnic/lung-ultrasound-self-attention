@@ -125,7 +125,7 @@ print('=' * 80)
 # Callbacks
 # -EarlyStopping
 early_stop_callback = EarlyStopping(
-    monitor='validation_loss',
+    monitor='val_loss',
     patience=20,
     strict=False,
     verbose=False,
@@ -151,11 +151,11 @@ checkpoint_dir = f"{working_dir}/checkpoints/{model_name}"
 checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
                                       save_top_k=1,
                                       mode="min",
-                                      monitor="validation_loss",
+                                      monitor="val_loss",
                                       save_last=True,
                                       save_on_train_epoch_end=False,
                                       verbose=True,
-                                      filename="{epoch}-{validation_loss:.4f}")
+                                      filename="{epoch}-{val_loss:.4f}")
 
 callbacks = [
             # DeviceStatsMonitor(),
