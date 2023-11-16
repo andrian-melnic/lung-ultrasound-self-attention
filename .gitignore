@@ -161,3 +161,4 @@ data/dataset_test.h5
 *.h5
 *.json
 .vscode/launch.json
+*.json
