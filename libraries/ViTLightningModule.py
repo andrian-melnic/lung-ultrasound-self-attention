@@ -76,7 +76,7 @@ class ViTLightningModule(pl.LightningModule):
         loss, accuracy = self.common_step(batch, batch_idx)
         print(f"val_acc: {accuracy}")
         print(f"val_loss: {loss}")     
-        self.log("validation_loss", loss, on_epoch=True, sync_dist=True)
+        self.log("val_loss", loss, on_epoch=True, sync_dist=True)
         self.log("validation_accuracy", accuracy, on_epoch=True, sync_dist=True)
 
         return loss

@@ -18,7 +18,7 @@ from torchvision import transforms
 class HDF5Dataset(Dataset):
     def __init__(self, file_path):
         self.file_path = file_path
-        self.index_map_path = os.path.dirname(file_path) + "/index_map_" + os.path.splitext(os.path.basename(file_path))[0] + ".pkl"
+        self.index_map_path = os.path.dirname(file_path) + "/frame_index_map.pkl"
         self.h5file = h5py.File(file_path, 'r')
         self.group_names = list(self.h5file.keys())
         self.total_videos = sum(len(self.h5file[group_name]) for group_name in self.group_names)
