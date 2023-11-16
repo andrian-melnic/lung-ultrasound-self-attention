@@ -60,38 +60,39 @@ class LUSModelLightningModule(pl.LightningModule):
                                   heads=4)
 
 # --------------------------------- resnet --------------------------------- #
-        if "resnet18" in model_name:
-            self.model = models.resnet18(pretrained=pretrained)
-            self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
-            print(f"\nUsing pretrained weights {self.pretrained}\n")
-            if self.pretrained:
-                # List of layers to exclude from freezing
-                excluded_layers = ['fc', 'layer3', 'layer4']
-                self.freeze_layers_with_exclusion(excluded_layers)
-                self.print_layers_req_grad()
+        # if "resnet18" in model_name:
+        #     self.model = models.resnet18(pretrained=pretrained)
+        #     self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
+        #     print(f"\nUsing pretrained weights {self.pretrained}\n")
+        #     if self.pretrained:
+        #         # List of layers to exclude from freezing
+        #         excluded_layers = ['fc', 'layer3', 'layer4']
+        #         self.freeze_layers_with_exclusion(excluded_layers)
+        #         self.print_layers_req_grad()
                 
-        elif "resnet50" in model_name:
-            self.model = models.resnet50(pretrained=pretrained)
-            self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
-            print(f"\nUsing pretrained weights {self.pretrained}\n")
-            if self.pretrained:
-                # List of layers to exclude from freezing
-                excluded_layers = ['fc', 'layer3', 'layer4']
-                self.freeze_layers_with_exclusion(excluded_layers)
-                self.print_layers_req_grad()
+        # elif "resnet50" in model_name:
+        #     self.model = models.resnet50(pretrained=pretrained)
+        #     self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
+        #     print(f"\nUsing pretrained weights {self.pretrained}\n")
+        #     if self.pretrained:
+        #         # List of layers to exclude from freezing
+        #         excluded_layers = ['fc', 'layer3', 'layer4']
+        #         self.freeze_layers_with_exclusion(excluded_layers)
+        #         self.print_layers_req_grad()
                 
                 
-        # if "resnet" in model_name    
+        if "resnet" in model_name :   
             # torch image models resnet18/50
-            # self.model = timm.create_model(f"{model_name}.a1_in1k",
-            #                                 pretrained=self.pretrained,
-            #                                 num_classes=self.num_classes)
-            # print(f"\nUsing pretrained weights {self.pretrained}\n")
-            # if self.pretrained:
-            #     # List of layers to exclude from freezing
-            #     excluded_layers = ['fc', 'layer3', 'layer4']
-            #     self.freeze_layers_with_exclusion(excluded_layers)
-            #     self.print_layers_req_grad()
+            self.model = timm.create_model(f"{model_name}.a1_in1k",
+                                            pretrained=self.pretrained,
+                                            num_classes=self.num_classes,
+                                            drop_rate=0.5)
+            print(f"\nUsing pretrained weights {self.pretrained}\n")
+            if self.pretrained:
+                # List of layers to exclude from freezing
+                excluded_layers = ['fc', 'layer3', 'layer4']
+                self.freeze_layers_with_exclusion(excluded_layers)
+                self.print_layers_req_grad()
             
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
