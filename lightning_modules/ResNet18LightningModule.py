@@ -98,7 +98,7 @@ class ResNet18LightningModule(pl.LightningModule):
         logits = self(x)
         loss = self.criterion(logits, y)
         acc = self.accuracy_metric(logits, y)
-        self.log('validation_loss', loss, prog_bar=True)
+        self.log('val_loss', loss, prog_bar=True)
         self.log('validation_acc', acc, prog_bar=True)
         
 
