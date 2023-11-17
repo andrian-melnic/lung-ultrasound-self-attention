@@ -9,18 +9,15 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch import Trainer
-from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
-from tabulate import tabulate
-from lightning.pytorch.callbacks import RichProgressBar
-from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTheme
-
-
 from lightning.pytorch.tuner import Tuner
 
-from args_processing import parse_arguments
+import args_processing
+from utils import *
+from callbacks import *
+from run_model import *
 from get_sets import get_sets, get_class_weights
 
-args = parse_arguments()
+args = args_processing.parse_arguments()
 
 print("\n" + "-"*80 + "\n")
 pl.seed_everything(args.rseed)
@@ -99,12 +96,11 @@ hyperparameters = {
 #   "class_weights": class_weights
 #   "configuration": configuration
 }
-# Instantiate lightning model
-
 freeze_layers = None
 if args.pretrained:
     if args.freeze_layers:
         freeze_layers = args.freeze_layers
+        
 model = LUSModelLightningModule(model_name=args.model, 
                                 hparams=hyperparameters,
                                 class_weights=train_weight_tensor,
@@ -112,79 +108,23 @@ model = LUSModelLightningModule(model_name=args.model,
                                 freeze_layers=freeze_layers,
                                 augmentation=args.augmentation)
 
-
-table_data = []
-table_data.append(["MODEL HYPERPARAMETERS"])
-table_data.append(["model", args.model])
-for key, value in hyperparameters.items():
-    if key not in ["train_dataset", "test_dataset"]:
-      table_data.append([key, value])
-
-table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
-print(table)
-# model.to('cuda')
-
-# print(f"\n\n{model.config}\n")
-
+generate_table(f"{args.model} Hyperparameters", hyperparameters, ["train_dataset", "test_dataset"])
 # --------------------------- Trainer configuration -------------------------- #
-
 print("\n\nTrainer configuration...")
 print('=' * 80)
+
 # Callbacks
-# -EarlyStopping
-early_stop_callback = EarlyStopping(
-    monitor='val_loss',
-    patience=10,
-    strict=False,
-    verbose=False,
-    mode='min'
-)
-
-# -Logger configuration
-version = f"V{args.version}" if args.version else "V1"
-version = version.strip()
-
-version = f"V{args.version}" if args.version else "V1"
-
-name_version = f"_{version}"
-name_trained = "_pretrained" if args.pretrained==True else ""
-name_layer = f"_{args.freeze_layers}" if args.freeze_layers else ""
-name_trimmed = "_trimmed" if args.trim_data else ""
-
-model_name = f"{args.model}{name_version}{name_trained}{name_layer}{name_trimmed}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
+early_stop_callback = early_stopper()
+model_name, version = get_model_name(args)
 logger = TensorBoardLogger("tb_logs", name=model_name, version=version)
-# -Checkpointing
-#   Checkpoints directory
 checkpoint_dir = f"{working_dir}/checkpoints/{model_name}"
-checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
-                                      save_top_k=1,
-                                      mode="min",
-                                      monitor="val_loss",
-                                      save_last=True,
-                                      save_on_train_epoch_end=False,
-                                      verbose=True,
-                                      filename="{epoch}-{val_loss:.4f}")
-# progress_bar = RichProgressBar(
-#     theme=RichProgressBarTheme(
-#         description="green_yellow",
-#         progress_bar="green1",
-#         progress_bar_finished="green1",
-#         progress_bar_pulse="#6206E0",
-#         batch_progress="green_yellow",
-#         time="grey82",
-#         processing_speed="grey82",
-#         metrics="grey82",
-#         metrics_text_delimiter="\n",
-#     ), 
-# )
+checkpoint_callback = checkpoint_saver(checkpoint_dir)
 callbacks = [
-            # DeviceStatsMonitor(),
             RichProgressBar(),
             LearningRateMonitor(),
             early_stop_callback,
             checkpoint_callback
             ]
-
 # Trainer args
 trainer_args = {
     "max_epochs": args.max_epochs,
@@ -193,17 +133,6 @@ trainer_args = {
     "accumulate_grad_batches": args.accumulate_grad_batches,
     "logger": logger
 }
-table_data = []
-table_data.append(["TRAINER ARGUMENTS"])
-for key, value in trainer_args.items():
-    if key not in ["callbacks", "logger"]:
-        table_data.append([key, value])
-
-table = tabulate(table_data, headers="firstrow", tablefmt="fancy_grid")
-print("\n\n" + table)
-print(f"Model checkpoints directory is {checkpoint_dir}")
-print("\n\n")
-
 # Trainer 
 trainer = Trainer(**trainer_args,
                 #   detect_anomaly=True,
@@ -215,56 +144,18 @@ trainer = Trainer(**trainer_args,
                     default_root_dir = checkpoint_dir,
                     devices=1)
 
-# Trainer tuner
-# tuner = Tuner(trainer)
-# tuner.lr_find(model)
-# Print the information of each callback
+generate_table("Trainer args", trainer_args, ["callbacks", "logger"])
 print("\n\n" + "-" * 20)
 print("Trainer Callbacks:")
 print("-" * 20 + "\n\n")
 for callback in trainer.callbacks:
     print(f"- {type(callback).__name__}")
-
+print(f"Model checkpoints directory is {checkpoint_dir}\n\n")
 
 # ---------------------------- Model fit and test ---------------------------- #
-def check_checkpoint(chkp):
-
-    print("Checkpoint mode activated...\n")
-
-    if (chkp == "best"):
-        print("Loading BEST checkpoint...\n")
-
-    if (chkp == "last"):
-        print("Loading LAST checkpoint...\n")
-
-    else:
-    # Check if checkpoint file exists
-        if not os.path.isfile(chkp):
-            print(f"Checkpoint file '{chkp}' does not exist. Exiting...")
-            exit()
-
-    print(f"Loading checkpoint from PATH: '{chkp}'...\n")
-
-# model = torch.compile(model, mode="reduce-overhead")
-
 if args.mode == "train":
-    print("\n\nTRAINING MODEL...")
-    print('=' * 80 + "\n")
-    if args.chkp:
-        check_checkpoint(args.chkp)
-        trainer.fit(model, lus_data_module, ckpt_path=args.chkp)
-        
-    else:
-        print("Instantiating trainer without checkpoint...")
-        trainer.fit(model, lus_data_module)
-        
+    fit_model(model, trainer, lus_data_module, args.chkp)
 if args.mode == "test":
-    print("\n\nTESTING MODEL...")
-    print('=' * 80 + "\n")
-    if args.chkp:
-        check_checkpoint(args.chkp)
-        trainer.test(model, lus_data_module, ckpt_path=args.chkp)
-    else:
-        print("No checkpoint provided, testing from scratch...")
-        trainer.test(model, lus_data_module)
+    test_model(model, trainer, lus_data_module, args.chkp)
+
 
