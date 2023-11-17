@@ -12,6 +12,11 @@ from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
 from torchmetrics.classification import MulticlassF1Score, Accuracy
 
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 from DataAugmentation import DataAugmentation
 
 
@@ -38,6 +43,7 @@ class LUSModelLightningModule(pl.LightningModule):
         self.weight_decay = hparams['weight_decay']
         self.momentum = hparams['momentum']
         self.label_smoothing = hparams['label_smoothing']
+        self.drop_rate = hparams['drop_rate']
         self.pretrained = pretrained
         self.augmentation = augmentation
         self.freeze_layers = freeze_layers
@@ -86,7 +92,7 @@ class LUSModelLightningModule(pl.LightningModule):
             self.model = timm.create_model(f"{model_name}.a1_in1k",
                                             pretrained=self.pretrained,
                                             num_classes=self.num_classes,
-                                            drop_rate=0.5)
+                                            drop_rate=self.drop_rate)
             print(f"\nUsing pretrained weights {self.pretrained}\n")
             if self.pretrained:
                 # List of layers to exclude from freezing
@@ -143,8 +149,8 @@ class LUSModelLightningModule(pl.LightningModule):
         
         self.optimizer_name = str(hparams['optimizer']).lower()
         
-        self.weighted_cross_entropy = nn.CrossEntropyLoss(weight=class_weights)
-        self.cross_entropy = nn.CrossEntropyLoss()
+        self.weighted_cross_entropy = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=self.label_smoothing)
+        self.cross_entropy = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
         
         self.save_hyperparameters(ignore=['class_weights'])
         
@@ -162,6 +168,10 @@ class LUSModelLightningModule(pl.LightningModule):
         self.train_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
         self.val_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
         self.test_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
+        
+        # Your model initialization here
+        self.train_losses = []
+        self.val_losses = []
 
         
 # ------------------------------ Methods & Hooks ----------------------------- #
@@ -186,7 +196,7 @@ class LUSModelLightningModule(pl.LightningModule):
         scheduler = {
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
                                                                     mode='min', 
-                                                                    patience=10, 
+                                                                    patience=5, 
                                                                     factor=0.5,
                                                                     verbose=True),
             'monitor': 'val_loss',  # Monitor validation loss
@@ -197,6 +207,14 @@ class LUSModelLightningModule(pl.LightningModule):
 
     def forward(self, x):
         return self.model(x)
+
+    def on_epoch_end(self):
+        # Logging train and validation losses to TensorBoard
+        self.logger.experiment.add_scalar('train_loss', torch.tensor(self.train_losses).mean(), self.current_epoch)
+        self.logger.experiment.add_scalar('val_loss', torch.tensor(self.val_losses).mean(), self.current_epoch)
+        
+        self.train_losses = []
+        self.val_losses = []
 
     def on_after_batch_transfer(self, batch, dataloader_idx):
         x, y = batch
@@ -212,11 +230,12 @@ class LUSModelLightningModule(pl.LightningModule):
         
         loss = self.weighted_cross_entropy(logits, y)
         # loss = self.cross_entropy(logits, y)
-        acc = self.train_acc(logits, y)
-        # f1 = self.train_f1(logits, y)
+        self.train_acc(logits, y)
         
-        self.log('train_loss', loss, prog_bar=True, on_epoch=True)
-        self.log('train_acc', acc)
+        self.log_dict({'train_loss': loss, 
+                       'train_acc': self.train_acc}, prog_bar=True, on_epoch=True)
+        self.train_losses.append(loss.item())
+        #self.train_f1(logits, y)
         # self.log('train_f1', f1, on_epoch=True, logger=True, on_step=False)
         return loss
 
@@ -226,12 +245,14 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         
         loss = self.cross_entropy(logits, y)
-        acc = self.val_acc(logits, y)
-        # f1 = self.val_f1(logits, y)
+        self.val_acc(logits, y)
         
-        self.log('val_loss', loss, prog_bar=True, on_epoch=True)
-        self.log('val_acc', acc)
+        self.log_dict({'val_loss': loss, 
+                       'val_acc': self.val_acc}, prog_bar=True, on_epoch=True)
+        self.val_losses.append(loss.item())
+        # f1 = self.val_f1(logits, y)z
         # self.log('val_f1', f1)
+        return loss
 
     def test_step(self, batch, batch_idx):
 
@@ -239,13 +260,17 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         
         loss = self.cross_entropy(logits, y)
-        acc = self.test_acc(logits, y)
-        f1 = self.test_f1(logits, y)
+        self.test_acc(logits, y)
+        self.test_f1(logits, y)
         
-        self.log('test_loss', loss, on_epoch=True, prog_bar=True)
-        self.log('test_acc', acc, on_epoch=True, prog_bar=True)
-        self.log('test_f1', f1, on_epoch=True, prog_bar=True)
-    
+        self.log_dict({'test_loss': loss, 
+                       'test_acc': self.test_acc, 
+                       'test_f1': self.test_f1}, prog_bar=True, on_epoch=True)
+        # self.log('test_loss', loss, on_epoch=True, prog_bar=True)
+        # self.log('test_acc', self.test_acc, on_epoch=True, prog_bar=True)
+        # self.log('test_f1', self.test_f1, on_epoch=True, prog_bar=True)
+        
+        return loss
         
     def show_batch(self, win_size=(10, 10)):
 

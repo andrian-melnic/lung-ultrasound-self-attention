@@ -45,6 +45,7 @@ def parse_arguments():
     parser.add_argument("--test", dest="test", action='store_true')
     parser.add_argument("--mixup", dest="mixup", action='store_true')
     parser.add_argument("--augmentation", dest="augmentation", action='store_true')
+    parser.add_argument("--drop_rate", type=float, default=0.1)
 
     # Add an argument for the configuration file
     parser.add_argument('--config', type=str, help='Path to JSON configuration file')

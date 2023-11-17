@@ -11,6 +11,9 @@ from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch import Trainer
 from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
 from tabulate import tabulate
+from lightning.pytorch.callbacks import RichProgressBar
+from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTheme
+
 
 from lightning.pytorch.tuner import Tuner
 
@@ -64,8 +67,12 @@ lus_data_module = LUSDataModule(sets["train"],
                                 args.batch_size,
                                 args.mixup)
 
-
+print("- Train set class weights: ")
 train_weight_tensor = get_class_weights(sets["train_indices"], split_info)
+print("\n- Val set class weights: ")
+get_class_weights(sets["val_indices"], split_info)
+print("\n- Test set class weights: ")
+get_class_weights(sets["test_indices"], split_info)
 # ---------------------------------------------------------------------------- #
 #                         Model & trainer configuration                        #
 # ---------------------------------------------------------------------------- #
@@ -88,6 +95,7 @@ hyperparameters = {
   "weight_decay": args.weight_decay,    
   "momentum": args.momentum,
   "label_smoothing": args.label_smoothing,
+  "drop_rate":args.drop_rate
 #   "class_weights": class_weights
 #   "configuration": configuration
 }
@@ -126,7 +134,7 @@ print('=' * 80)
 # -EarlyStopping
 early_stop_callback = EarlyStopping(
     monitor='val_loss',
-    patience=20,
+    patience=10,
     strict=False,
     verbose=False,
     mode='min'
@@ -156,9 +164,22 @@ checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir,
                                       save_on_train_epoch_end=False,
                                       verbose=True,
                                       filename="{epoch}-{val_loss:.4f}")
-
+# progress_bar = RichProgressBar(
+#     theme=RichProgressBarTheme(
+#         description="green_yellow",
+#         progress_bar="green1",
+#         progress_bar_finished="green1",
+#         progress_bar_pulse="#6206E0",
+#         batch_progress="green_yellow",
+#         time="grey82",
+#         processing_speed="grey82",
+#         metrics="grey82",
+#         metrics_text_delimiter="\n",
+#     ), 
+# )
 callbacks = [
             # DeviceStatsMonitor(),
+            RichProgressBar(),
             LearningRateMonitor(),
             early_stop_callback,
             checkpoint_callback
@@ -191,7 +212,8 @@ trainer = Trainer(**trainer_args,
                 #   gradient_clip_val=0.1,
                     # benchmark=True,
                     accelerator="gpu",
-                    default_root_dir = checkpoint_dir)
+                    default_root_dir = checkpoint_dir,
+                    devices=1)
 
 # Trainer tuner
 # tuner = Tuner(trainer)
