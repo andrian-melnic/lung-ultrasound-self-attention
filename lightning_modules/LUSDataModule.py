@@ -4,12 +4,12 @@ from torch.utils.data import DataLoader
 
 from timm.data.mixup import Mixup
 mixup_args = {
-    'mixup_alpha': 0.3,
+    'mixup_alpha': 0.5,
     'cutmix_alpha': 0,
     'prob': 1,
     'switch_prob': 0.,
     'mode': 'batch',
-    'label_smoothing': 0.1,
+    'label_smoothing': 0,
     'num_classes': 4
 }
 mixup_fn = Mixup(**mixup_args)
