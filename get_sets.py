@@ -92,6 +92,6 @@ def get_class_weights(indices, split_info):
                                         y=y_labels)
 
     weights_tensor = torch.Tensor(class_weights)
-    print("Class Weights: ", class_weights)
+    print(class_weights)
     return weights_tensor
 
