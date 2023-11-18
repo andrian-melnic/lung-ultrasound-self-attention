@@ -1,3 +1,5 @@
+from utils import check_checkpoint
+
 def fit_model(model, trainer, datamodule, checkpoint_path=None):
     print("\n\nTRAINING MODEL...")
     print('=' * 80 + "\n")
