@@ -33,11 +33,11 @@ class DataAugmentation(nn.Module):
         #     # K.RandomVerticalFlip(p=0.3)
         # )
         self.transforms = torch.nn.Sequential(
-            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.25), p=0.5),
-            K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.3),
-            K.RandomContrast(contrast=(0.5, 1), p=0.5),
+            K.RandomAffine(degrees=(-15, 15), scale=(1.1, 1.25), p=0.5),
+            K.RandomRotation(degrees=(-25, 25), p=0.5),
+            K.RandomContrast(contrast=(0.9, 1.8), p=0.5),
             K.RandomHorizontalFlip(p=0.5),
-            K.RandomGamma(gamma=(0.9, 1.8), gain=(0.9, 1.8), p=0.5),
+            K.RandomVerticalFlip(p=0.5),
             K.RandomGaussianBlur((3, 3), (0.5, 1.5), p=0.3)
         )
         print(self.transforms)
