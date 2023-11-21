@@ -18,7 +18,7 @@ def parse_arguments():
                     "swin_vit",
                     "simple_vit"]
 
-    allowed_modes = ["train", "test", "train_test"]
+    allowed_modes = ["train", "test", "train_test", "tune"]
     parser.add_argument("--model", type=str, choices=allowed_models)
     parser.add_argument("--mode", type=str, choices=allowed_modes)
     parser.add_argument("--version", type=str)
