@@ -120,7 +120,8 @@ class LUSModelLightningModule(pl.LightningModule):
             print(f"\nUsing pretrained weights: {pretrained}\n")
             self.model = timm.create_model('swin_base_patch4_window7_224.ms_in1k', 
                                            pretrained=pretrained, 
-                                           num_classes=self.num_classes)
+                                           num_classes=self.num_classes,
+                                           drop_rate=self.drop_rate)
             
             if self.pretrained:
                 if self.freeze_layers is not None:
@@ -194,12 +195,19 @@ class LUSModelLightningModule(pl.LightningModule):
         
         
         scheduler = {
+            # 'scheduler': torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+            #                                                         T_max=5,
+            #                                                         verbose=True),
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
                                                                     mode='min', 
                                                                     patience=5, 
                                                                     factor=0.5,
                                                                     verbose=True),
             'monitor': 'val_loss',  # Monitor validation loss
+            # 'interval': 'epoch',  # Adjust the LR on every step
+            # 'frequency': 1,  # Frequency of the adjustment
+            # 'warm_up_start_lr': self.lr,  # Initial LR during warm-up
+            'warm_up_epochs': 5,  # Number of warm-up epochs
             'verbose': True
         }
         
