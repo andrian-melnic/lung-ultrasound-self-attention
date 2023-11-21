@@ -15,6 +15,7 @@ def get_sets(rseed,
              hospitaldict_path,
              train_ratio,
              trim_data,
+             pretrained
              ):
     dataset = HDF5Dataset(dataset_h5_path)
 
@@ -59,9 +60,9 @@ def get_sets(rseed,
         test_indices = test_indices_trimmed
 
 
-    train_dataset = FrameTargetDataset(train_subset)
-    test_dataset = FrameTargetDataset(test_subset)
-    val_dataset = FrameTargetDataset(val_subset)
+    train_dataset = FrameTargetDataset(train_subset, pretrained=pretrained)
+    test_dataset = FrameTargetDataset(test_subset, pretrained=pretrained)
+    val_dataset = FrameTargetDataset(val_subset, pretrained=pretrained)
     
     print(f"Train size: {len(train_dataset)}")
     print(f"Test size: {len(test_dataset)}")    

@@ -54,7 +54,8 @@ sets, split_info = get_sets(
     data_file,
     args.hospitaldict_path,
     args.train_ratio,
-    args.trim_data
+    args.trim_data,
+    args.pretrained
 )
 
 lus_data_module = LUSDataModule(sets["train"], 
