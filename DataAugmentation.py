@@ -4,6 +4,7 @@ import math
 import os
 import torch
 import torch.nn as nn
+from torchvision import transforms
 import torchvision.transforms.functional as F
 from PIL import Image
 
@@ -32,11 +33,17 @@ class DataAugmentation(nn.Module):
         #     K.RandomHorizontalFlip(p=0.5),
         #     # K.RandomVerticalFlip(p=0.3)
         # )
+        
+        self.image_mean = [0.124, 0.1274, 0.131]
+        self.image_std = [0.1621, 0.1658, 0.1717]
         self.transforms = torch.nn.Sequential(
             K.RandomAffine(degrees=(-15, 15), scale=(1.1, 1.25), p=0.5),
-            K.RandomRotation(degrees=(-25, 25), p=0.3),
+            K.RandomRotation(degrees=(-15, 15), p=0.3),
             K.RandomHorizontalFlip(p=0.5),
-            K.RandomGaussianBlur((3, 3), (0.5, 1.5), p=0.3)
+            K.RandomBrightness(brightness=(0.85,0.95), p=0.5),
+            K.RandomContrast(contrast=(0.9, 1.2), p=0.3),
+            K.RandomGamma(gamma=(0.8, 1.), gain=(1., 1.), p=0.5),
+            transforms.Normalize(mean=self.image_mean, std=self.image_std)
         )
         print(self.transforms)
 
