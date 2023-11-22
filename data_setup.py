@@ -122,18 +122,22 @@ class HDF5Dataset(Dataset):
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset, pretrained=False):
+    def __init__(self, hdf5_dataset, pretrained=False, trainset=False):
         """
         Initialize the dataset.
 
         Args:
             hdf5_dataset (h5py.Dataset): The HDF5 dataset.
         """
+        
         self.hdf5_dataset = hdf5_dataset
+        self.trainset = trainset
         self.resize_size = (224, 224)
         self.pretrained = pretrained
-        self.image_mean = [0.485, 0.456, 0.406] if self.pretrained else [0.1236, 0.1268, 0.1301]
-        self.image_std = [0.229, 0.224, 0.225] if self.pretrained else [0.1520, 0.1556, 0.1610]
+        self.image_mean = [0.124, 0.1274, 0.131]
+        self.image_std = [0.1621, 0.1658, 0.1717]
+        # self.image_mean = [0.485, 0.456, 0.406] if self.pretrained else [0.1236, 0.1268, 0.1301]
+        # self.image_std = [0.229, 0.224, 0.225] if self.pretrained else [0.1520, 0.1556, 0.1610]
         print(f"\nimage_mean: {self.image_mean}\nimage_std: {self.image_std}\n")
         
 
@@ -161,7 +165,8 @@ class FrameTargetDataset(Dataset):
 
         frame_tensor = transforms.ToTensor()(frame_data)
         frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
-        frame_tensor = transforms.Normalize(mean=self.image_mean, std=self.image_std)(frame_tensor)
+        if not self.trainset:
+            frame_tensor = transforms.Normalize(mean=self.image_mean, std=self.image_std)(frame_tensor)
         frame_tensor = frame_tensor.permute(0, 1, 2)
             
         # Target data to integer scores

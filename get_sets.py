@@ -60,7 +60,7 @@ def get_sets(rseed,
         test_indices = test_indices_trimmed
 
 
-    train_dataset = FrameTargetDataset(train_subset, pretrained=pretrained)
+    train_dataset = FrameTargetDataset(train_subset, pretrained=pretrained, trainset=True)
     test_dataset = FrameTargetDataset(test_subset, pretrained=pretrained)
     val_dataset = FrameTargetDataset(val_subset, pretrained=pretrained)
     
