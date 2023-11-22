@@ -158,5 +158,14 @@ if args.mode == "train":
     fit_model(model, trainer, lus_data_module, args.chkp)
 if args.mode == "test":
     test_model(model, trainer, lus_data_module, args.chkp)
+if args.mode == "tune":
+    tuner = Tuner(trainer)
+    tuner.lr_find(model=model, 
+                  datamodule=lus_data_module, 
+                  method='fit',
+                  min_lr=1e-05,
+                  max_lr=0.1,
+                  mode="exponential",
+                  )
 
 
