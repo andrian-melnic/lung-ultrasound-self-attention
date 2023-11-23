@@ -124,7 +124,7 @@ class HDF5Dataset(Dataset):
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset, pretrained=False, trainset=False):
+    def __init__(self, hdf5_dataset, pretrained=False, transform=None):
         """
         Initialize the dataset.
 
@@ -133,32 +133,11 @@ class FrameTargetDataset(Dataset):
         """
         
         self.hdf5_dataset = hdf5_dataset
-        self.trainset = trainset
         self.resize_size = (224, 224)
         self.pretrained = pretrained
-        self.image_mean = (0.124, 0.1274, 0.131)
-        self.image_std = (0.1621, 0.1658, 0.1717)
-
-        self.test_transforms = A.Compose([
-            A.Resize(width=224, height=224, always_apply=True),
-            A.Normalize(mean=self.image_mean, std=self.image_std),
-            ToTensorV2(),
-        ])
-        self.train_transforms = A.Compose([
-            A.Resize(width=224, height=224, always_apply=True),
-            A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
-            A.Rotate(limit=15, p=0.3),
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
-            A.Normalize(mean=self.image_mean, std=self.image_std),
-            ToTensorV2(),
-        ])
-        # self.image_mean = [0.485, 0.456, 0.406] if self.pretrained else [0.1236, 0.1268, 0.1301]
-        # self.image_std = [0.229, 0.224, 0.225] if self.pretrained else [0.1520, 0.1556, 0.1610]
-
-        print(f"\nimage_mean: {self.image_mean}\nimage_std: {self.image_std}\n")
-        
+        self.transform = transform
+        print(f"Transforms:\n{transform}")
+    
 
     def __len__(self):
         """
@@ -181,12 +160,16 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
-        if self.trainset:
-            frame_tensor = self.train_transforms(image=frame_data)
+        norm_transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(self.resize_size),
+            transforms.ToTensor()
+        ])
+        if self.transform:
+            frame_tensor = self.transform(image=frame_data)
+            frame_tensor = frame_tensor["image"]    
         else:
-            frame_tensor = self.test_transforms(image=frame_data)
-            
-        frame_tensor = frame_tensor["image"]    
+            frame_tensor = norm_transforms(frame_data)
         # Target data to integer scores
         # target_data = torch.tensor(sum(target_data))
         target_data = int(target_data[()])

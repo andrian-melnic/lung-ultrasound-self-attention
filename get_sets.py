@@ -4,6 +4,10 @@ from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_se
 from torch.utils.data import Subset   
 from sklearn.utils.class_weight import compute_class_weight
 
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+from torchvision import transforms
+
 
 def create_default_dict():
     return defaultdict(float)
@@ -17,6 +21,27 @@ def get_sets(rseed,
              trim_data,
              pretrained
              ):
+    
+    image_mean = (0.12402, 0.12744, 0.13105)
+    image_std = (0.15992, 0.16364, 0.1696)
+    print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
+    
+    test_transforms = A.Compose([
+        A.Resize(width=224, height=224, always_apply=True),
+        A.Normalize(mean=image_mean, std=image_std),
+        ToTensorV2(),
+    ])
+    
+    train_transforms = A.Compose([
+        A.Resize(width=224, height=224, always_apply=True),
+        A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
+        A.Rotate(limit=15, p=0.3),
+        A.HorizontalFlip(p=0.5),
+        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+        A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+        A.Normalize(mean=image_mean, std=image_std),
+        ToTensorV2(),
+    ])
     dataset = HDF5Dataset(dataset_h5_path)
 
     train_indices = []
@@ -60,9 +85,9 @@ def get_sets(rseed,
         test_indices = test_indices_trimmed
 
 
-    train_dataset = FrameTargetDataset(train_subset, pretrained=pretrained, trainset=True)
-    test_dataset = FrameTargetDataset(test_subset, pretrained=pretrained)
-    val_dataset = FrameTargetDataset(val_subset, pretrained=pretrained)
+    train_dataset = FrameTargetDataset(train_subset, pretrained=pretrained, transform=train_transforms)
+    test_dataset = FrameTargetDataset(test_subset, pretrained=pretrained, transform=test_transforms)
+    val_dataset = FrameTargetDataset(val_subset, pretrained=pretrained, transform=test_transforms)
     
     print(f"Train size: {len(train_dataset)}")
     print(f"Test size: {len(test_dataset)}")    
