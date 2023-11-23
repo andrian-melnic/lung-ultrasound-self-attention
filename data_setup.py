@@ -9,7 +9,8 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 from kornia import image_to_tensor, tensor_to_image
-
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 # ---------------------------------------------------------------------------- #
 #                                  HDF5Dataset                                 #
@@ -135,8 +136,24 @@ class FrameTargetDataset(Dataset):
         self.trainset = trainset
         self.resize_size = (224, 224)
         self.pretrained = pretrained
-        self.image_mean = [0.124, 0.1274, 0.131]
-        self.image_std = [0.1621, 0.1658, 0.1717]
+        self.image_mean = (0.124, 0.1274, 0.131)
+        self.image_std = (0.1621, 0.1658, 0.1717)
+
+        self.test_transforms = A.Compose([
+            A.Resize(width=224, height=224, always_apply=True),
+            A.Normalize(mean=self.image_mean, std=self.image_std),
+            ToTensorV2(),
+        ])
+        self.train_transforms = A.Compose([
+            A.Resize(width=224, height=224, always_apply=True),
+            A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
+            A.Rotate(limit=15, p=0.3),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+            A.Normalize(mean=self.image_mean, std=self.image_std),
+            ToTensorV2(),
+        ])
         # self.image_mean = [0.485, 0.456, 0.406] if self.pretrained else [0.1236, 0.1268, 0.1301]
         # self.image_std = [0.229, 0.224, 0.225] if self.pretrained else [0.1520, 0.1556, 0.1610]
 
@@ -163,25 +180,13 @@ class FrameTargetDataset(Dataset):
             tuple: A tuple containing the frame tensor and the target data.
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
-        
-        self.test_transforms = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(self.resize_size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=self.image_mean, std=self.image_std)
-        ])
-        self.train_transforms = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(self.resize_size),
-            transforms.ToTensor(),
-        ])
+
         if self.trainset:
-            # frame_tensor = image_to_tensor(frame_data, keepdim=True).float()
-            # frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
-            frame_tensor = self.train_transforms(frame_data)
+            frame_tensor = self.train_transforms(image=frame_data)
         else:
-            frame_tensor = self.test_transforms(frame_data)
+            frame_tensor = self.test_transforms(image=frame_data)
             
+        frame_tensor = frame_tensor["image"]    
         # Target data to integer scores
         # target_data = torch.tensor(sum(target_data))
         target_data = int(target_data[()])

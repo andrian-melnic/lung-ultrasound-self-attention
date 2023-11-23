@@ -224,11 +224,11 @@ class LUSModelLightningModule(pl.LightningModule):
         self.train_losses = []
         self.val_losses = []
 
-    def on_after_batch_transfer(self, batch, dataloader_idx):
-        x, y = batch
-        if self.trainer.training and self.augmentation:
-            x = self.transform(x)  # => we perform GPU/Batched data augmentation
-        return x, y
+    # def on_after_batch_transfer(self, batch, dataloader_idx):
+    #     x, y = batch
+    #     if self.trainer.training and self.augmentation:
+    #         x = self.transform(x)  # => we perform GPU/Batched data augmentation
+    #     return x, y
       
     
     def training_step(self, batch, batch_idx):
