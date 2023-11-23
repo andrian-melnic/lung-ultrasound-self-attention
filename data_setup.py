@@ -8,6 +8,7 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 from torchvision import transforms
+from kornia import image_to_tensor, tensor_to_image
 
 
 # ---------------------------------------------------------------------------- #
@@ -138,6 +139,7 @@ class FrameTargetDataset(Dataset):
         self.image_std = [0.1621, 0.1658, 0.1717]
         # self.image_mean = [0.485, 0.456, 0.406] if self.pretrained else [0.1236, 0.1268, 0.1301]
         # self.image_std = [0.229, 0.224, 0.225] if self.pretrained else [0.1520, 0.1556, 0.1610]
+
         print(f"\nimage_mean: {self.image_mean}\nimage_std: {self.image_std}\n")
         
 
@@ -161,13 +163,24 @@ class FrameTargetDataset(Dataset):
             tuple: A tuple containing the frame tensor and the target data.
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
-
-
-        frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
-        if not self.trainset:
-            frame_tensor = transforms.Normalize(mean=self.image_mean, std=self.image_std)(frame_tensor)
-        frame_tensor = frame_tensor.permute(0, 1, 2)
+        
+        self.test_transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(self.resize_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=self.image_mean, std=self.image_std)
+        ])
+        self.train_transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(self.resize_size),
+            transforms.ToTensor(),
+        ])
+        if self.trainset:
+            # frame_tensor = image_to_tensor(frame_data, keepdim=True).float()
+            # frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
+            frame_tensor = self.train_transforms(frame_data)
+        else:
+            frame_tensor = self.test_transforms(frame_data)
             
         # Target data to integer scores
         # target_data = torch.tensor(sum(target_data))

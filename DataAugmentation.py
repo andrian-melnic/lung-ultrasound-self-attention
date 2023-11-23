@@ -36,7 +36,7 @@ class DataAugmentation(nn.Module):
         
         self.image_mean = [0.124, 0.1274, 0.131]
         self.image_std = [0.1621, 0.1658, 0.1717]
-        self.transforms = torch.nn.Sequential(
+        self.transforms = nn.Sequential(
             K.RandomAffine(degrees=(-15, 15), scale=(1.1, 1.25), p=0.5),
             K.RandomRotation(degrees=(-15, 15), p=0.3),
             K.RandomHorizontalFlip(p=0.5),
