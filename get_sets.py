@@ -19,7 +19,7 @@ def get_sets(rseed,
              hospitaldict_path,
              train_ratio,
              trim_data,
-             pretrained
+             augmentation=False,
              ):
     
     image_mean = (0.12402, 0.12744, 0.13105)
@@ -32,16 +32,23 @@ def get_sets(rseed,
         ToTensorV2(),
     ])
     
-    train_transforms = A.Compose([
-        A.Resize(width=224, height=224, always_apply=True),
-        A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
-        A.Rotate(limit=15, p=0.3),
-        A.HorizontalFlip(p=0.5),
-        A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-        A.RandomGamma(gamma_limit=(80, 120), p=0.5),
-        A.Normalize(mean=image_mean, std=image_std),
-        ToTensorV2(),
-    ])
+    if augmentation:
+        train_transforms = A.Compose([
+            A.Resize(width=224, height=224, always_apply=True),
+            A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
+            A.Rotate(limit=15, p=0.3),
+            A.HorizontalFlip(p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+            A.Normalize(mean=image_mean, std=image_std),
+            ToTensorV2(),
+        ])
+        print(f"Using Augmentations: {augmentation}")
+        
+    else:
+        # Use test_transforms if augmentation is not enabled
+        train_transforms = test_transforms
+    
     dataset = HDF5Dataset(dataset_h5_path)
 
     train_indices = []
@@ -85,9 +92,9 @@ def get_sets(rseed,
         test_indices = test_indices_trimmed
 
 
-    train_dataset = FrameTargetDataset(train_subset, pretrained=pretrained, transform=train_transforms)
-    test_dataset = FrameTargetDataset(test_subset, pretrained=pretrained, transform=test_transforms)
-    val_dataset = FrameTargetDataset(val_subset, pretrained=pretrained, transform=test_transforms)
+    train_dataset = FrameTargetDataset(train_subset, transform=train_transforms)
+    test_dataset = FrameTargetDataset(test_subset, transform=test_transforms)
+    val_dataset = FrameTargetDataset(val_subset, transform=test_transforms)
     
     print(f"Train size: {len(train_dataset)}")
     print(f"Test size: {len(test_dataset)}")    

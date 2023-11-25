@@ -56,7 +56,7 @@ if __name__ == "__main__":
         args.hospitaldict_path,
         args.train_ratio,
         args.trim_data,
-        args.pretrained
+        args.augmentation
     )
 
     lus_data_module = LUSDataModule(sets["train"], 

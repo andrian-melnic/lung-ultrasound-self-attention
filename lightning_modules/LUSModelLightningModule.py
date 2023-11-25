@@ -156,8 +156,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.save_hyperparameters(ignore=['class_weights'])
         
 # ------------------------------ Data processing ----------------------------- #
-        print(f"Using augmentation: {self.augmentation}")
-        self.transform = DataAugmentation()
+        # print(f"Using augmentation: {self.augmentation}")
+        # self.transform = DataAugmentation()
         
 # ---------------------------------- Metrics --------------------------------- #
 

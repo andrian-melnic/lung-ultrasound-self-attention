@@ -124,7 +124,7 @@ class HDF5Dataset(Dataset):
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset, pretrained=False, transform=None):
+    def __init__(self, hdf5_dataset, transform=None):
         """
         Initialize the dataset.
 
@@ -134,9 +134,8 @@ class FrameTargetDataset(Dataset):
         
         self.hdf5_dataset = hdf5_dataset
         self.resize_size = (224, 224)
-        self.pretrained = pretrained
         self.transform = transform
-        print(f"Transforms:\n{transform}")
+        print(f"Transforms:\n{transform}\n")
     
 
     def __len__(self):
@@ -160,6 +159,7 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
+        # Transform without normalization to get set stats
         norm_transforms = transforms.Compose([
             transforms.ToPILImage(),
             transforms.Resize(self.resize_size),
