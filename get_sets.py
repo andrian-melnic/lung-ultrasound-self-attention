@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_sets 
+from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, split_dataset_videos, reduce_sets 
 from torch.utils.data import Subset   
 from sklearn.utils.class_weight import compute_class_weight
 
@@ -22,8 +22,8 @@ def get_sets(rseed,
              augmentation=False,
              ):
     
-    image_mean = (0.12402, 0.12744, 0.13105)
-    image_std = (0.15992, 0.16364, 0.1696)
+    image_mean = (0.12768, 0.13132, 0.13534)
+    image_std = (0.1629, 0.16679, 0.17305)
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
     test_transforms = A.Compose([
@@ -56,13 +56,14 @@ def get_sets(rseed,
     test_indices = []
 
     train_ratio = train_ratio
-    test_ratio = (1 - train_ratio)/2
-    val_ratio = test_ratio
-    ratios = [train_ratio, test_ratio, val_ratio]
+    test_ratio = round(1 - train_ratio, 1)
+    val_ratio = 0.2
+
+    ratios = [train_ratio, val_ratio, test_ratio]
 
 
     print(f"Split ratios: {ratios}")
-    train_indices, val_indices, test_indices, split_info = split_dataset(
+    train_indices, val_indices, test_indices, split_info = split_dataset_videos(
         rseed=rseed,
         dataset=dataset,
         pkl_file=hospitaldict_path,

@@ -373,3 +373,238 @@ def reduce_sets(seed, train, val=[], test=[], perc=1.0):
     
     print(f"dataset reduction: {int(perc*100)}% (train={len(train_indices)}, test={len(test_indices)})")
     return train_indices, test_indices
+
+
+def split_dataset_by_videos(self, train_ratio, val_ratio, test_ratio):
+    """
+    Splits the dataset into train, validation, and test sets based on the number of videos.
+
+    Args:
+        train_ratio (float): The ratio of videos to include in the train set.
+        val_ratio (float): The ratio of videos to include in the validation set.
+        test_ratio (float): The ratio of videos to include in the test set.
+
+    Returns:
+        train_set (Subset): The train set containing a subset of videos.
+        val_set (Subset): The validation set containing a subset of videos.
+        test_set (Subset): The test set containing a subset of videos.
+    """
+    # Calculate the number of videos for each set
+    num_videos = len(self.group_names)
+    num_train_videos = int(train_ratio * num_videos)
+    num_val_videos = int(val_ratio * num_videos)
+    num_test_videos = int(test_ratio * num_videos)
+
+    # Shuffle the group names to randomly assign videos to sets
+    random.shuffle(self.group_names)
+
+    # Split the group names into train, validation, and test sets
+    train_group_names = self.group_names[:num_train_videos]
+    val_group_names = self.group_names[num_train_videos:num_train_videos+num_val_videos]
+    test_group_names = self.group_names[num_train_videos+num_val_videos:]
+
+    # Create subsets based on the group names
+    train_set = Subset(self, self.get_indices(train_group_names))
+    val_set = Subset(self, self.get_indices(val_group_names))
+    test_set = Subset(self, self.get_indices(test_group_names))
+
+    return train_set, val_set, test_set
+
+def get_indices(self, group_names):
+    """
+    Returns the indices of the frames corresponding to the given group names.
+
+    Args:
+        group_names (list): A list of group names.
+
+    Returns:
+        indices (list): A list of indices corresponding to the frames in the given group names.
+    """
+    indices = []
+    for group_name in group_names:
+        indices.extend(list(range(len(self.h5file[group_name]))))
+    return indices
+def split_dataset_videos(rseed, dataset, pkl_file, ratios=[0.8, 0.1, 0.2]):
+    """
+    Split the dataset into training and test subsets based on a given pickle file, considering videos at the patient level.
+
+    Parameters:
+        rseed (int): The seed for random number generation.
+        dataset (HDF5Dataset): The HDF5 dataset.
+        pkl_file (str): The path to the pickle file.
+        ratios (list): A list of ratios for the train and test sets. The sum of ratios should be 1.0.
+
+    Returns:
+        train_indices (list): The indices of the training set.
+        test_indices (list): The indices of the test set.
+        split_info (dict): A dictionary containing various statistics and information about the split.
+
+    Raises:
+        FileNotFoundError: If the pickle file does not exist.
+    """
+    # Adjust the filenames for combined pickle file
+    combined_filename = os.path.dirname(pkl_file) + f"/_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
+
+    if os.path.exists(combined_filename):
+        print("\nSerialized splits found, loading ...\n")
+        # Load existing combined data
+        with open(combined_filename, 'rb') as combined_file:
+            all_sets_info = pickle.load(combined_file)
+
+        # Extract individual sets from the combined data
+        split_info = all_sets_info['split_info']
+        train_indices = all_sets_info['train_indices']
+        val_indices = all_sets_info['val_indices']
+        test_indices = all_sets_info['test_indices']
+        print(f"Train size: {len(train_indices)}, Test size: {len(test_indices)}, Val size: {len(val_indices)}")
+            
+        return train_indices, val_indices, test_indices, split_info
+
+    random.seed(rseed)
+
+    # 0. Gather the metadata
+    medical_center_patients, data_index, data_map_idxs_pcm, score_counts, labels = _load_dsdata_pickle(dataset, pkl_file)
+
+    # 1. Calculate the target number of videos for each split
+    total_videos = len(set(video_info[1] for video_info in dataset.frame_index_map.values()))
+    train_videos_count = int(total_videos * ratios[0])
+    test_videos_count = total_videos - train_videos_count
+    val_videos_count = int(train_videos_count * ratios[1])
+    train_videos_count = train_videos_count - val_videos_count
+
+    dataset_videos = set(video_info for video_info in dataset.frame_index_map.values())
+    
+    # 2. Splitting the dataset by patients taking into account video ratio
+    train_videos = set()
+    test_videos = set()
+    val_videos = set()
+    
+
+    # 2.1 Test set
+    while len(test_videos) < test_videos_count:
+        # pick randomly a video from the dataset and add it to the set
+        video_info = random.choice(list(dataset_videos - test_videos))
+        test_videos.add(video_info)
+        # get the video group name and video name and use them to retrieve the patient and medical center
+        group_name, video_name = video_info
+        video_patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        video_cetner = dataset.h5file[group_name][video_name].attrs["medical_center"]
+
+        # check if the patient in that medical center has other videos
+        for other_video in list(dataset_videos - test_videos):
+            other_group_name, other_video_name = other_video
+            patient = dataset.h5file[other_group_name][other_video_name].attrs["patient"]
+            center = dataset.h5file[other_group_name][other_video_name].attrs["medical_center"]
+            if(patient == video_patient and center == video_cetner):
+                test_videos.add(other_video)
+    
+    train_val_videos = dataset_videos - test_videos
+    # 2.2 Val set
+    while len(val_videos) < val_videos_count:
+        # pick randomly a video from the dataset and add it to the set
+        video_info = random.choice(list(train_val_videos - val_videos))
+        val_videos.add(video_info)
+        # get the video group name and video name and use them to retrieve the patient and medical center
+        group_name, video_name = video_info
+        video_patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        video_cetner = dataset.h5file[group_name][video_name].attrs["medical_center"]
+
+        # check if the patient in that medical center has other videos
+        for other_video in list(train_val_videos - val_videos):
+            other_group_name, other_video_name = other_video
+            patient = dataset.h5file[other_group_name][other_video_name].attrs["patient"]
+            center = dataset.h5file[other_group_name][other_video_name].attrs["medical_center"]
+            if(patient == video_patient and center == video_cetner):
+                val_videos.add(other_video)
+
+    # 2.3 Training set
+    train_videos.update(video_info for video_info in train_val_videos-val_videos)
+
+    # 3. Create indices
+    train_indices = [index for index, video_info in dataset.frame_index_map.items() if video_info in train_videos]
+    test_indices = [index for index, video_info in dataset.frame_index_map.items() if video_info in test_videos]
+    val_indices = [index for index, video_info in dataset.frame_index_map.items() if video_info in val_videos]
+    
+    
+    # 4. Get the number of videos and frames for each patient-center combination
+    test_videos_per_patient = defaultdict(int)
+    test_frames_per_patient = defaultdict(int)
+
+    for video_info in test_videos:
+        group_name, video_name = video_info
+        patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        center = dataset.h5file[group_name][video_name].attrs["medical_center"]
+        test_videos_per_patient[(center, patient)] += 1
+        test_frames_per_patient[(center, patient)] += len(dataset.h5file[group_name][video_name]['frames'])
+
+    train_videos_per_patient = defaultdict(int)
+    train_frames_per_patient = defaultdict(int)
+
+    for video_info in train_videos:
+        group_name, video_name = video_info
+        patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        center = dataset.h5file[group_name][video_name].attrs["medical_center"]
+        train_videos_per_patient[(center, patient)] += 1
+        train_frames_per_patient[(center, patient)] += len(dataset.h5file[group_name][video_name]['frames'])
+        
+    val_videos_per_patient = defaultdict(int)
+    val_frames_per_patient = defaultdict(int)
+
+    for video_info in val_videos:
+        group_name, video_name = video_info
+        patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        center = dataset.h5file[group_name][video_name].attrs["medical_center"]
+        val_videos_per_patient[(center, patient)] += 1
+        val_frames_per_patient[(center, patient)] += len(dataset.h5file[group_name][video_name]['frames'])
+
+        
+    # 4. Diagnostic checks and return values
+    total_videos_calc = len(set(video_info[1] for video_info in train_videos)) + \
+                        len(set(video_info[1] for video_info in test_videos)) +\
+                        len(set(video_info[1] for video_info in val_videos))
+    if total_videos != total_videos_calc:
+        print(f"dataset splitting gone wrong (expected: {total_videos}, got:{total_videos_calc})")
+
+    # Sum up statistics info
+    split_info = {
+        'train_indices': train_indices,
+        'train_videos': train_videos,
+        'test_indices': test_indices,
+        'test_videos': test_videos,
+        'val_indices': val_indices,
+        'val_videos': val_videos,
+        
+        'train_videos_per_patient': train_videos_per_patient,
+        'train_frames_per_patient': train_frames_per_patient,
+        
+        'test_videos_per_patient': test_videos_per_patient,
+        'test_frames_per_patient': test_frames_per_patient, 
+        
+        'val_videos_per_patient': val_videos_per_patient,
+        'val_frames_per_patient': val_frames_per_patient,
+
+        'data_map_idxs_pcm': data_map_idxs_pcm,
+        'medical_center_patients': medical_center_patients,
+
+        'score_counts': score_counts,
+        'labels': labels,
+        'train_videos_count': train_videos_count,
+        'test_videos_count': test_videos_count
+    }
+
+    print(f"Train size: {len(train_indices)}, Test size: {len(test_indices)}, Val size: {len(val_indices)}")
+    # Serialize the split data for future use
+    print(f"\nSerializing splits...\n")
+    # Create a dictionary to store all information
+    all_sets_info = {
+        'split_info': split_info,
+        'train_indices': train_indices,
+        'val_indices': val_indices,
+        'test_indices': test_indices
+    }
+
+    # Serialize the combined information
+    with open(combined_filename, 'wb') as combined_file:
+        pickle.dump(all_sets_info, combined_file)
+
+    return train_indices, test_indices, val_indices, split_info
