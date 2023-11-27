@@ -9,6 +9,7 @@ def parse_arguments():
 
     allowed_models = ["google_vit", 
                     "resnet18",
+                    "resnet10",
                     "resnet50",
                     "beit", 
                     'timm_bot', 

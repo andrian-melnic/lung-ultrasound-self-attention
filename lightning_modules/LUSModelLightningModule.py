@@ -89,10 +89,16 @@ class LUSModelLightningModule(pl.LightningModule):
                 
         if "resnet" in model_name :   
             # torch image models resnet18/50
-            self.model = timm.create_model(f"{model_name}.a1_in1k",
-                                            pretrained=self.pretrained,
-                                            num_classes=self.num_classes,
-                                            drop_rate=self.drop_rate)
+            if "resnet10t" in model_name:
+                self.model = timm.create_model(f"resnet10t.c3_in1k",
+                                                pretrained=self.pretrained,
+                                                num_classes=self.num_classes,
+                                                drop_rate=self.drop_rate)
+            else:
+                self.model = timm.create_model(f"{model_name}.a1_in1k",
+                                                pretrained=self.pretrained,
+                                                num_classes=self.num_classes,
+                                                drop_rate=self.drop_rate)
             print(f"\nUsing pretrained weights {self.pretrained}\n")
             if self.pretrained:
                 # List of layers to exclude from freezing
@@ -200,7 +206,7 @@ class LUSModelLightningModule(pl.LightningModule):
             #                                                         verbose=True),
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
                                                                     mode='min', 
-                                                                    patience=5, 
+                                                                    patience=10, 
                                                                     factor=0.5,
                                                                     verbose=True),
             'monitor': 'val_loss',  # Monitor validation loss
