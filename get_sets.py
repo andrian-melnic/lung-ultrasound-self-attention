@@ -27,19 +27,23 @@ def get_sets(rseed,
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
     test_transforms = A.Compose([
-        A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_AREA),
+        A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
         A.Normalize(mean=image_mean, std=image_std),
         ToTensorV2(),
     ])
     
     if augmentation:
         train_transforms = A.Compose([
-            A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_AREA),
-            A.Affine(rotate=(-23, 23), scale=(0.8, 1.2), keep_ratio=True, p=0.5),
-            A.Rotate(limit=15, p=0.5),
+            A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
+            
+            A.ShiftScaleRotate(shift_limit=0.1, rotate_limit=23, scale_limit=(0.1, 0.5), p=0.5, interpolation=cv2.INTER_CUBIC, border_mode=cv2.BORDER_CONSTANT),
+            A.ElasticTransform(alpha=0.5, sigma=25, alpha_affine=15, interpolation=cv2.INTER_CUBIC, p=0.5, border_mode=cv2.BORDER_CONSTANT),
             A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.2, p=0.5),
+            
+            A.GaussianBlur(blur_limit=(3,3), p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
             A.RandomGamma(gamma_limit=(90, 110), p=0.5),
+            
             A.Normalize(mean=image_mean, std=image_std),
             ToTensorV2(),
         ])
