@@ -3,7 +3,7 @@ import torch
 from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, split_dataset_videos, reduce_sets 
 from torch.utils.data import Subset   
 from sklearn.utils.class_weight import compute_class_weight
-
+import cv2
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from torchvision import transforms
@@ -27,19 +27,19 @@ def get_sets(rseed,
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
     test_transforms = A.Compose([
-        A.Resize(width=224, height=224, always_apply=True),
+        A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_AREA),
         A.Normalize(mean=image_mean, std=image_std),
         ToTensorV2(),
     ])
     
     if augmentation:
         train_transforms = A.Compose([
-            A.Resize(width=224, height=224, always_apply=True),
-            A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
-            A.Rotate(limit=15, p=0.3),
+            A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_AREA),
+            A.Affine(rotate=(-23, 23), scale=(0.8, 1.2), keep_ratio=True, p=0.5),
+            A.Rotate(limit=15, p=0.5),
             A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.2, p=0.5),
+            A.RandomGamma(gamma_limit=(90, 110), p=0.5),
             A.Normalize(mean=image_mean, std=image_std),
             ToTensorV2(),
         ])
