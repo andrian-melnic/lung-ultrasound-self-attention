@@ -118,6 +118,63 @@ class HDF5Dataset(Dataset):
         return index, frame_data, target_data, patient, medical_center
 
 
+
+class HDF5ConvexDataset(HDF5Dataset):
+    def __init__(self, file_path):
+        super().__init__(file_path)
+        # Override the group_names attribute to only include 'convex'
+        self.group_names = ['convex']
+        # Recalculate the total number of videos and frames
+        self.total_videos, self.total_frames, self.frame_index_map = self.calculate_total_videos_and_frames()
+
+    def calculate_total_videos_and_frames(self):
+        """
+        Calculates the total number of videos and creates an index map for each frame.
+
+        Returns:
+            total_videos (int): The total number of videos.
+            total_frames (int): The total number of frames.
+            frame_index_map (dict): A dictionary mapping frame indices to their corresponding group and video names.
+        """
+        convex_index_map_path = os.path.dirname(self.file_path) + "/convex_index_map.pkl"
+
+        # Check if the convex index map file exists and load it if found
+        try:
+            with open(convex_index_map_path, 'rb') as f:
+                print("\n\nConvex index map found, loading ...\n")
+                saved_data = pickle.load(f)
+                total_frames = saved_data['total_frames']
+                frame_index_map = saved_data['frame_index_map']
+                print(f"Loaded convex index map: {len(frame_index_map)} frames\n")
+        except FileNotFoundError:
+            print("Convex index map NOT FOUND\n")
+            max_frame_idx_end = 0
+            frame_index_map = {}
+
+            # Create tqdm progress bar
+            with tqdm(total=len(self.h5file['convex']), desc="Calculating frames and index map", unit='video', dynamic_ncols=True) as pbar:
+                for video_name in self.h5file['convex']:
+                    video_group = self.h5file['convex'][video_name]
+                    frame_idx_start = video_group.attrs['frame_idx_start']
+                    frame_idx_end = video_group.attrs['frame_idx_end']
+                    max_frame_idx_end = max(max_frame_idx_end, frame_idx_end)
+                    for i in range(frame_idx_start, frame_idx_end + 1):
+                        frame_index_map[i] = ('convex', video_name)
+                    pbar.update(1)  # Update progress bar for each video
+
+            total_frames = max_frame_idx_end + 1
+
+            # Save convex index map to a pickle file
+            with open(convex_index_map_path, 'wb') as f:
+                pickle.dump({'total_frames': total_frames, 'frame_index_map': frame_index_map}, f)
+
+            print(f"\n\nConvex index map calculated and saved: {len(frame_index_map)} frames.")
+
+        total_videos = len(self.h5file['convex'])
+        return total_videos, total_frames, frame_index_map
+
+
+
 # ---------------------------------------------------------------------------- #
 #                              FrameTargetDataset                              #
 # ---------------------------------------------------------------------------- #
@@ -443,7 +500,7 @@ def split_dataset_videos(rseed, dataset, pkl_file, ratios=[0.8, 0.1, 0.2]):
         FileNotFoundError: If the pickle file does not exist.
     """
     # Adjust the filenames for combined pickle file
-    combined_filename = os.path.dirname(pkl_file) + f"/_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
+    combined_filename = os.path.dirname(pkl_file) + f"/convex_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
 
     if os.path.exists(combined_filename):
         print("\nSerialized splits found, loading ...\n")

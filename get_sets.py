@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, split_dataset_videos, reduce_sets 
+from data_setup import HDF5Dataset, HDF5ConvexDataset, FrameTargetDataset, split_dataset, split_dataset_videos, reduce_sets 
 from torch.utils.data import Subset   
 from sklearn.utils.class_weight import compute_class_weight
 import cv2
@@ -53,7 +53,7 @@ def get_sets(rseed,
         # Use test_transforms if augmentation is not enabled
         train_transforms = test_transforms
     
-    dataset = HDF5Dataset(dataset_h5_path)
+    dataset = HDF5ConvexDataset(dataset_h5_path)
 
     train_indices = []
     val_indices = []
@@ -67,7 +67,7 @@ def get_sets(rseed,
 
 
     print(f"Split ratios: {ratios}")
-    train_indices, val_indices, test_indices, split_info = split_dataset_videos(
+    train_indices, test_indices, val_indices, split_info = split_dataset_videos(
         rseed=rseed,
         dataset=dataset,
         pkl_file=hospitaldict_path,
