@@ -1,23 +1,33 @@
+# Standard libraries
+from PIL import Image
+import numpy as np
+
+# PyTorch and related libraries
 import torch
-import torchvision
 import torch.nn as nn
-import timm
-import lightning.pytorch as pl
-from kornia import tensor_to_image
-import matplotlib.pyplot as plt
+import torchvision
 from torchvision import models
-from torchvision.models import resnet18, ResNet18_Weights, resnet50, ResNet50_Weights
+import torchvision.transforms.functional as TF
+
+# PyTorch Lightning
+import lightning.pytorch as pl
+
+# Third-party libraries
+from kornia import tensor_to_image
+import timm
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Model-related imports
+from torchvision.models import resnet18, resnet50
+from torchvision.models import ResNet18_Weights, ResNet50_Weights
 from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
+
+# Metrics and evaluation
 from torchmetrics.classification import MulticlassF1Score, Accuracy
-
-
-
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-from DataAugmentation import DataAugmentation
+from sklearn.metrics import confusion_matrix
 
 
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
@@ -30,7 +40,7 @@ class LUSModelLightningModule(pl.LightningModule):
                  class_weights=None,
                  freeze_layers=None,
                  pretrained=False,
-                 augmentation=False):
+                 show_model_summary=False):
         
         super(LUSModelLightningModule, self).__init__()
         
@@ -45,8 +55,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.label_smoothing = hparams['label_smoothing']
         self.drop_rate = hparams['drop_rate']
         self.pretrained = pretrained
-        self.augmentation = augmentation
         self.freeze_layers = freeze_layers
+        self.show_model_summary = show_model_summary
         
 # ----------------------------------- Model ---------------------------------- #
 
@@ -74,7 +84,8 @@ class LUSModelLightningModule(pl.LightningModule):
         #         # List of layers to exclude from freezing
         #         excluded_layers = ['fc', 'layer3', 'layer4']
         #         self.freeze_layers_with_exclusion(excluded_layers)
-        #         self.print_layers_req_grad()
+        # if self.show_model_summary:
+        #     self.print_layers_req_grad()
                 
         # elif "resnet50" in model_name:
         #     self.model = models.resnet50(pretrained=pretrained)
@@ -84,7 +95,8 @@ class LUSModelLightningModule(pl.LightningModule):
         #         # List of layers to exclude from freezing
         #         excluded_layers = ['fc', 'layer3', 'layer4']
         #         self.freeze_layers_with_exclusion(excluded_layers)
-        #         self.print_layers_req_grad()
+        # if self.show_model_summary:
+        #     self.print_layers_req_grad()
                 
                 
         if "resnet" in model_name :   
@@ -104,7 +116,8 @@ class LUSModelLightningModule(pl.LightningModule):
                 # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
-                self.print_layers_req_grad()
+                if self.show_model_summary:
+                    self.print_layers_req_grad()
             
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
@@ -118,7 +131,8 @@ class LUSModelLightningModule(pl.LightningModule):
                 # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
-                self.print_layers_req_grad()
+                if self.show_model_summary:
+                    self.print_layers_req_grad()
 
 # -------------------------------- swin_vit ---------------------------------- #
         if model_name == 'swin_vit':
@@ -136,7 +150,8 @@ class LUSModelLightningModule(pl.LightningModule):
                     excluded_layers = ['head']
                     self.freeze_layers_with_exclusion(excluded_layers)
                     
-                self.print_layers_req_grad()
+                if self.show_model_summary:
+                    self.print_layers_req_grad()
                 
 # ------------------------------------ vit ----------------------------------- #
             # self.model = ViT(
@@ -151,8 +166,8 @@ class LUSModelLightningModule(pl.LightningModule):
             #         emb_dropout = 0.1
             #     )
 # ------------------------------------ HP ------------------------------------ #
-
-        print(f"\nModel summary:\n{self.model}")
+        if show_model_summary:
+            print(f"\nModel summary:\n{self.model}")
         
         self.optimizer_name = str(hparams['optimizer']).lower()
         
@@ -160,10 +175,6 @@ class LUSModelLightningModule(pl.LightningModule):
         self.cross_entropy = nn.CrossEntropyLoss(label_smoothing=self.label_smoothing)
         
         self.save_hyperparameters(ignore=['class_weights'])
-        
-# ------------------------------ Data processing ----------------------------- #
-        # print(f"Using augmentation: {self.augmentation}")
-        # self.transform = DataAugmentation()
         
 # ---------------------------------- Metrics --------------------------------- #
 
@@ -230,27 +241,17 @@ class LUSModelLightningModule(pl.LightningModule):
         self.train_losses = []
         self.val_losses = []
 
-    # def on_after_batch_transfer(self, batch, dataloader_idx):
-    #     x, y = batch
-    #     if self.trainer.training and self.augmentation:
-    #         x = self.transform(x)  # => we perform GPU/Batched data augmentation
-    #     return x, y
-      
-    
     def training_step(self, batch, batch_idx):
 
         x, y = batch
         logits = self(x)
         
         loss = self.weighted_cross_entropy(logits, y)
-        # loss = self.cross_entropy(logits, y)
-        self.train_acc(logits, y)
         
+        self.train_acc(logits, y)
         self.log_dict({'train_loss': loss, 
                        'train_acc': self.train_acc}, prog_bar=True, on_epoch=True)
         self.train_losses.append(loss.item())
-        #self.train_f1(logits, y)
-        # self.log('train_f1', f1, on_epoch=True, logger=True, on_step=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -259,13 +260,11 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         
         loss = self.cross_entropy(logits, y)
-        self.val_acc(logits, y)
         
+        self.val_acc(logits, y)
         self.log_dict({'val_loss': loss, 
                        'val_acc': self.val_acc}, prog_bar=True, on_epoch=True)
         self.val_losses.append(loss.item())
-        # f1 = self.val_f1(logits, y)z
-        # self.log('val_f1', f1)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -274,18 +273,31 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         
         loss = self.cross_entropy(logits, y)
+        
+        # Convert logits to predicted labels
+        preds = torch.argmax(logits, dim=1)
+        # Compute confusion matrix
+        cm = confusion_matrix(y.cpu().numpy(), preds.cpu().numpy())
+        
+        # Log confusion matrix to TensorBoard
+        self.logger.experiment.add_figure('Confusion Matrix', self.plot_confusion_matrix(cm), self.current_epoch)
         self.test_acc(logits, y)
         self.test_f1(logits, y)
-        
         self.log_dict({'test_loss': loss, 
                        'test_acc': self.test_acc, 
                        'test_f1': self.test_f1}, prog_bar=True, on_epoch=True)
-        # self.log('test_loss', loss, on_epoch=True, prog_bar=True)
-        # self.log('test_acc', self.test_acc, on_epoch=True, prog_bar=True)
-        # self.log('test_f1', self.test_f1, on_epoch=True, prog_bar=True)
-        
         return loss
-        
+    
+    def plot_confusion_matrix(self, cm):
+        class_names = [str(i) for i in range(len(cm))]
+        fig, ax = plt.subplots(figsize=(len(class_names), len(class_names)))
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
+        plt.ylabel('Actual')
+        plt.xlabel('Predicted')
+        plt.title('Confusion Matrix')
+        plt.close(fig)
+        return fig
+    
     def show_batch(self, win_size=(10, 10)):
 
       def _to_vis(data):

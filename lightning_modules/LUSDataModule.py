@@ -63,4 +63,5 @@ class LUSDataModule(pl.LightningDataModule):
                           num_workers=self.num_workers,
                           pin_memory=True,
                           persistent_workers=self.persistent_workers,
-                          collate_fn=collate_fn)
+                          collate_fn=collate_fn,
+                          shuffle=True)

@@ -192,7 +192,7 @@ class FrameTargetDataset(Dataset):
         self.hdf5_dataset = hdf5_dataset
         self.resize_size = (224, 224)
         self.transform = transform
-        print(f"Transforms:\n{transform}\n")
+        print(f"\nTransforms:\n{transform}\n")
     
 
     def __len__(self):
@@ -298,24 +298,22 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
             FileNotFoundError: If the pickle file does not exist.
 
         """
-        
-        split_info_filename = os.path.dirname(pkl_file) + f"/_split_info_{ratios[0]}.pkl"
-        train_indices_filename = os.path.dirname(pkl_file) + f"/_train_indices_{ratios[0]}.pkl"
-        val_indices_filename = os.path.dirname(pkl_file) + f"/_val_indices_{ratios[1]}.pkl"
-        test_indices_filename = os.path.dirname(pkl_file) + f"/_test_indices_{ratios[2]}.pkl"
+        combined_filename = os.path.dirname(pkl_file) + f"/_patinets_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
 
-        if os.path.exists(split_info_filename) and os.path.exists(train_indices_filename) and os.path.exists(val_indices_filename) and os.path.exists(test_indices_filename):
+
+        if os.path.exists(combined_filename):
             print("\nSerialized splits found, loading ...\n")
             # Load existing split data
-            with open(split_info_filename, 'rb') as split_info_file:
-                split_info = pickle.load(split_info_file)
-            with open(train_indices_filename, 'rb') as train_indices_file:
-                train_indices = pickle.load(train_indices_file)
-            with open(val_indices_filename, 'rb') as val_indices_file:
-                val_indices = pickle.load(val_indices_file)
-            with open(test_indices_filename, 'rb') as test_indices_file:
-                test_indices = pickle.load(test_indices_file)
+            with open(combined_filename, 'rb') as combined_file:
+                all_sets_info = pickle.load(combined_file)
+            # Extract individual sets from the combined data
+            split_info = all_sets_info['split_info']
+            train_indices = all_sets_info['train_indices']
+            val_indices = all_sets_info['val_indices']
+            test_indices = all_sets_info['test_indices']
+            print(f"Train size: {len(train_indices)}, Test size: {len(test_indices)}, Val size: {len(val_indices)}")
             return train_indices, val_indices, test_indices, split_info
+        
         random.seed(rseed)
         
         if len(ratios) == 2:
@@ -397,22 +395,28 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
         print(f"Train size: {len(train_indices)}, Val size: {len(val_indices)}, Test size: {len(test_indices)}")
         # Serialize the split data for future use
         print(f"\nSerializing splits...\n") 
-        with open(split_info_filename, 'wb') as split_info_file:
-            pickle.dump(split_info, split_info_file)
-        with open(train_indices_filename, 'wb') as train_indices_file:
-            pickle.dump(train_indices, train_indices_file)
-        with open(val_indices_filename, 'wb') as val_indices_file:
-            pickle.dump(val_indices, val_indices_file)
-        with open(test_indices_filename, 'wb') as test_indices_file:
-            pickle.dump(test_indices, test_indices_file)
+        all_sets_info = {
+            'split_info': split_info,
+            'train_indices': train_indices,
+            'val_indices': val_indices,
+            'test_indices': test_indices
+        }
+        # Serialize the combined information
+        with open(combined_filename, 'wb') as combined_file:
+            pickle.dump(all_sets_info, combined_file)
+
             
             
         return train_indices, val_indices, test_indices, split_info   
             
- 
- 
+def reduce_set(seed, indices_set, perc=1.0):
+    random.seed(seed)
+    num_samples = int(len(indices_set) * perc)
+    indices = random.sample(range(len(indices_set)), num_samples)
+    print(f"set reduction: {int(perc*100)}% (indices={len(indices)})")
+    return indices
             
-def reduce_sets(seed, train, val=[], test=[], perc=1.0):
+def reduce_sets(seed, train=[], val=[], test=[], perc=1.0):
     random.seed(seed)
 # Compute length of subsets
     num_train_samples = int(len(train) * perc)
@@ -431,56 +435,6 @@ def reduce_sets(seed, train, val=[], test=[], perc=1.0):
     print(f"dataset reduction: {int(perc*100)}% (train={len(train_indices)}, test={len(test_indices)})")
     return train_indices, test_indices
 
-
-def split_dataset_by_videos(self, train_ratio, val_ratio, test_ratio):
-    """
-    Splits the dataset into train, validation, and test sets based on the number of videos.
-
-    Args:
-        train_ratio (float): The ratio of videos to include in the train set.
-        val_ratio (float): The ratio of videos to include in the validation set.
-        test_ratio (float): The ratio of videos to include in the test set.
-
-    Returns:
-        train_set (Subset): The train set containing a subset of videos.
-        val_set (Subset): The validation set containing a subset of videos.
-        test_set (Subset): The test set containing a subset of videos.
-    """
-    # Calculate the number of videos for each set
-    num_videos = len(self.group_names)
-    num_train_videos = int(train_ratio * num_videos)
-    num_val_videos = int(val_ratio * num_videos)
-    num_test_videos = int(test_ratio * num_videos)
-
-    # Shuffle the group names to randomly assign videos to sets
-    random.shuffle(self.group_names)
-
-    # Split the group names into train, validation, and test sets
-    train_group_names = self.group_names[:num_train_videos]
-    val_group_names = self.group_names[num_train_videos:num_train_videos+num_val_videos]
-    test_group_names = self.group_names[num_train_videos+num_val_videos:]
-
-    # Create subsets based on the group names
-    train_set = Subset(self, self.get_indices(train_group_names))
-    val_set = Subset(self, self.get_indices(val_group_names))
-    test_set = Subset(self, self.get_indices(test_group_names))
-
-    return train_set, val_set, test_set
-
-def get_indices(self, group_names):
-    """
-    Returns the indices of the frames corresponding to the given group names.
-
-    Args:
-        group_names (list): A list of group names.
-
-    Returns:
-        indices (list): A list of indices corresponding to the frames in the given group names.
-    """
-    indices = []
-    for group_name in group_names:
-        indices.extend(list(range(len(self.h5file[group_name]))))
-    return indices
 def split_dataset_videos(rseed, dataset, pkl_file, ratios=[0.8, 0.1, 0.2]):
     """
     Split the dataset into training and test subsets based on a given pickle file, considering videos at the patient level.
@@ -500,7 +454,7 @@ def split_dataset_videos(rseed, dataset, pkl_file, ratios=[0.8, 0.1, 0.2]):
         FileNotFoundError: If the pickle file does not exist.
     """
     # Adjust the filenames for combined pickle file
-    combined_filename = os.path.dirname(pkl_file) + f"/convex_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
+    combined_filename = os.path.dirname(pkl_file) + f"/_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
 
     if os.path.exists(combined_filename):
         print("\nSerialized splits found, loading ...\n")
@@ -664,4 +618,4 @@ def split_dataset_videos(rseed, dataset, pkl_file, ratios=[0.8, 0.1, 0.2]):
     with open(combined_filename, 'wb') as combined_file:
         pickle.dump(all_sets_info, combined_file)
 
-    return train_indices, test_indices, val_indices, split_info
+    return train_indices, val_indices, test_indices, split_info
