@@ -26,7 +26,15 @@ def parse_arguments():
     parser.add_argument("--working_dir_path", type=str)
     parser.add_argument("--dataset_h5_path", type=str)
     parser.add_argument("--hospitaldict_path", type=str)
+    
     parser.add_argument("--trim_data", type=float)
+    parser.add_argument("--trim_train", type=float)
+    parser.add_argument("--trim_test", type=float)
+    parser.add_argument("--trim_val", type=float)
+    
+    parser.add_argument('--ratios', nargs='+', type=float, help='Sets ratios')
+
+
     parser.add_argument("--chkp", type=str)
     parser.add_argument("--rseed", type=int)
     parser.add_argument("--train_ratio", type=float, default=0.7)
@@ -36,6 +44,7 @@ def parse_arguments():
     parser.add_argument("--weight_decay", type=float, default=0.001)
     parser.add_argument("--momentum", type=float, default=0.001)
     parser.add_argument("--label_smoothing", type=float, default=0.1)
+    parser.add_argument("--drop_rate", type=float, default=0.1)
     parser.add_argument("--max_epochs", type=int, default=1)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--accumulate_grad_batches", type=int, default=4)
@@ -46,7 +55,8 @@ def parse_arguments():
     parser.add_argument("--test", dest="test", action='store_true')
     parser.add_argument("--mixup", dest="mixup", action='store_true')
     parser.add_argument("--augmentation", dest="augmentation", action='store_true')
-    parser.add_argument("--drop_rate", type=float, default=0.1)
+    parser.add_argument("--summary", dest="summary", action='store_true')
+    
 
     # Add an argument for the configuration file
     parser.add_argument('--config', type=str, help='Path to JSON configuration file')
@@ -70,7 +80,14 @@ def parse_arguments():
         for key, value in selected_config.items():
             if hasattr(args, key):
                 setattr(args, key, value)
-
+                
+    # Check and set the ratios
+    if "ratios" in selected_config:
+        ratios = selected_config["ratios"]
+        if len(ratios) != 3 or sum(ratios) != 1:
+            parser.error('Invalid ratios provided in the configuration file')
+            
+        
     print(f"args are: {args}")
 
     return args
