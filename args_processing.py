@@ -37,10 +37,10 @@ def parse_arguments():
 
     parser.add_argument("--chkp", type=str)
     parser.add_argument("--rseed", type=int)
-    parser.add_argument("--train_ratio", type=float, default=0.7)
-    parser.add_argument("--batch_size", type=int, default=90)
+    parser.add_argument("--train_ratio", type=float)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--optimizer", type=str, default="sgd")
-    parser.add_argument("--lr", type=float, default=0.0001)
+    parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--weight_decay", type=float, default=0.001)
     parser.add_argument("--momentum", type=float, default=0.001)
     parser.add_argument("--label_smoothing", type=float, default=0.1)
@@ -81,11 +81,11 @@ def parse_arguments():
             if hasattr(args, key):
                 setattr(args, key, value)
                 
-    # Check and set the ratios
-    if "ratios" in selected_config:
-        ratios = selected_config["ratios"]
-        if len(ratios) != 3 or sum(ratios) != 1:
-            parser.error('Invalid ratios provided in the configuration file')
+        # Check and set the ratios
+        if "ratios" in selected_config:
+            ratios = selected_config["ratios"]
+            if len(ratios) != 3 or sum(ratios) != 1:
+                parser.error('Invalid ratios provided in the configuration file')
             
         
     print(f"args are: {args}")

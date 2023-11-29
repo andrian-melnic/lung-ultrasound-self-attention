@@ -53,7 +53,7 @@ def get_sets(args):
             A.Normalize(mean=image_mean, std=image_std),
             ToTensorV2(),
         ])
-        print(f"Using Augmentations: {augmentation}")
+        print(f"Using Augmentations: {args.augmentation}")
         
     else:
         # Use test_transforms if augmentation is not enabled

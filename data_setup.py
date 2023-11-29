@@ -409,12 +409,14 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
             
         return train_indices, val_indices, test_indices, split_info   
             
+
 def reduce_set(seed, indices_set, perc=1.0):
     random.seed(seed)
     num_samples = int(len(indices_set) * perc)
-    indices = random.sample(range(len(indices_set)), num_samples)
+    indices = random.sample(indices_set, num_samples)
     print(f"set reduction: {int(perc*100)}% (indices={len(indices)})")
     return indices
+
             
 def reduce_sets(seed, train=[], val=[], test=[], perc=1.0):
     random.seed(seed)
@@ -423,12 +425,12 @@ def reduce_sets(seed, train=[], val=[], test=[], perc=1.0):
     num_test_samples = int(len(test) * perc)
 
     # Create random subsets
-    train_indices = random.sample(range(len(train)), num_train_samples)
-    test_indices = random.sample(range(len(test)), num_test_samples)
+    train_indices = random.sample(train, num_train_samples)
+    test_indices = random.sample(test, num_test_samples)
     
     if val:
         num_val_samples = int(len(val) * perc)
-        val_indices = random.sample(range(len(val)), num_val_samples)
+        val_indices = random.sample(val, num_val_samples)
         print(f"dataset reduction: {int(perc*100)}% (train={len(train_indices)}, val={len(val_indices)}, test={len(test_indices)})")
         return train_indices, val_indices, test_indices
     
