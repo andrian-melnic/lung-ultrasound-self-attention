@@ -47,7 +47,8 @@ def get_sets(args):
             A.HorizontalFlip(p=0.5),
             
             A.GaussianBlur(blur_limit=(3,3), p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
+            A.GaussNoise(p=0.5),
+            # A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
             A.RandomGamma(gamma_limit=(90, 110), p=0.5),
             
             A.Normalize(mean=image_mean, std=image_std),
