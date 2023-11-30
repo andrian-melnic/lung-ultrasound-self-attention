@@ -1,4 +1,5 @@
 from tabulate import tabulate
+import os
 
 def get_model_name(args):
     # -Logger configuration
@@ -10,9 +11,8 @@ def get_model_name(args):
     name_version = f"_{version}"
     name_trained = "_pretrained" if args.pretrained==True else ""
     name_layer = f"_{args.freeze_layers}" if args.freeze_layers else ""
-    name_trimmed = "_trimmed" if args.trim_data else ""
 
-    model_name = f"{args.model}{name_version}{name_trained}{name_layer}{name_trimmed}/{args.optimizer}/ds_{args.train_ratio}_lr{args.lr}_bs{args.batch_size}"
+    model_name = f"{args.model}{name_version}{name_trained}{name_layer}/{args.optimizer}/ds_{args.ratios[0]}_lr{args.lr}_bs{args.batch_size}"
     return model_name, version
 
 def generate_table(name, data, exclude=[]):

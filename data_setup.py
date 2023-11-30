@@ -8,7 +8,9 @@ from collections import defaultdict
 import torch
 import torch.nn as nn
 from torchvision import transforms
-
+from kornia import image_to_tensor, tensor_to_image
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 # ---------------------------------------------------------------------------- #
 #                                  HDF5Dataset                                 #
@@ -116,13 +118,70 @@ class HDF5Dataset(Dataset):
         return index, frame_data, target_data, patient, medical_center
 
 
+
+class HDF5ConvexDataset(HDF5Dataset):
+    def __init__(self, file_path):
+        super().__init__(file_path)
+        # Override the group_names attribute to only include 'convex'
+        self.group_names = ['convex']
+        # Recalculate the total number of videos and frames
+        self.total_videos, self.total_frames, self.frame_index_map = self.calculate_total_videos_and_frames()
+
+    def calculate_total_videos_and_frames(self):
+        """
+        Calculates the total number of videos and creates an index map for each frame.
+
+        Returns:
+            total_videos (int): The total number of videos.
+            total_frames (int): The total number of frames.
+            frame_index_map (dict): A dictionary mapping frame indices to their corresponding group and video names.
+        """
+        convex_index_map_path = os.path.dirname(self.file_path) + "/convex_index_map.pkl"
+
+        # Check if the convex index map file exists and load it if found
+        try:
+            with open(convex_index_map_path, 'rb') as f:
+                print("\n\nConvex index map found, loading ...\n")
+                saved_data = pickle.load(f)
+                total_frames = saved_data['total_frames']
+                frame_index_map = saved_data['frame_index_map']
+                print(f"Loaded convex index map: {len(frame_index_map)} frames\n")
+        except FileNotFoundError:
+            print("Convex index map NOT FOUND\n")
+            max_frame_idx_end = 0
+            frame_index_map = {}
+
+            # Create tqdm progress bar
+            with tqdm(total=len(self.h5file['convex']), desc="Calculating frames and index map", unit='video', dynamic_ncols=True) as pbar:
+                for video_name in self.h5file['convex']:
+                    video_group = self.h5file['convex'][video_name]
+                    frame_idx_start = video_group.attrs['frame_idx_start']
+                    frame_idx_end = video_group.attrs['frame_idx_end']
+                    max_frame_idx_end = max(max_frame_idx_end, frame_idx_end)
+                    for i in range(frame_idx_start, frame_idx_end + 1):
+                        frame_index_map[i] = ('convex', video_name)
+                    pbar.update(1)  # Update progress bar for each video
+
+            total_frames = max_frame_idx_end + 1
+
+            # Save convex index map to a pickle file
+            with open(convex_index_map_path, 'wb') as f:
+                pickle.dump({'total_frames': total_frames, 'frame_index_map': frame_index_map}, f)
+
+            print(f"\n\nConvex index map calculated and saved: {len(frame_index_map)} frames.")
+
+        total_videos = len(self.h5file['convex'])
+        return total_videos, total_frames, frame_index_map
+
+
+
 # ---------------------------------------------------------------------------- #
 #                              FrameTargetDataset                              #
 # ---------------------------------------------------------------------------- #
 
 # Custom replica class of the dataset to train the neural network (return -> [frame,target])
 class FrameTargetDataset(Dataset):
-    def __init__(self, hdf5_dataset, pretrained=False, trainset=False):
+    def __init__(self, hdf5_dataset, transform=None):
         """
         Initialize the dataset.
 
@@ -131,15 +190,10 @@ class FrameTargetDataset(Dataset):
         """
         
         self.hdf5_dataset = hdf5_dataset
-        self.trainset = trainset
         self.resize_size = (224, 224)
-        self.pretrained = pretrained
-        self.image_mean = [0.124, 0.1274, 0.131]
-        self.image_std = [0.1621, 0.1658, 0.1717]
-        # self.image_mean = [0.485, 0.456, 0.406] if self.pretrained else [0.1236, 0.1268, 0.1301]
-        # self.image_std = [0.229, 0.224, 0.225] if self.pretrained else [0.1520, 0.1556, 0.1610]
-        print(f"\nimage_mean: {self.image_mean}\nimage_std: {self.image_std}\n")
-        
+        self.transform = transform
+        print(f"\nTransforms:\n{transform}\n")
+    
 
     def __len__(self):
         """
@@ -162,13 +216,17 @@ class FrameTargetDataset(Dataset):
         """
         _, frame_data, target_data, _, _ = self.hdf5_dataset[index]
 
-
-        frame_tensor = transforms.ToTensor()(frame_data)
-        frame_tensor = transforms.Resize(self.resize_size)(frame_tensor)
-        if not self.trainset:
-            frame_tensor = transforms.Normalize(mean=self.image_mean, std=self.image_std)(frame_tensor)
-        frame_tensor = frame_tensor.permute(0, 1, 2)
-            
+        # Transform without normalization to get set stats
+        norm_transforms = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize(self.resize_size),
+            transforms.ToTensor()
+        ])
+        if self.transform:
+            frame_tensor = self.transform(image=frame_data)
+            frame_tensor = frame_tensor["image"]    
+        else:
+            frame_tensor = norm_transforms(frame_data)
         # Target data to integer scores
         # target_data = torch.tensor(sum(target_data))
         target_data = int(target_data[()])
@@ -240,24 +298,22 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
             FileNotFoundError: If the pickle file does not exist.
 
         """
-        
-        split_info_filename = os.path.dirname(pkl_file) + f"/_split_info_{ratios[0]}.pkl"
-        train_indices_filename = os.path.dirname(pkl_file) + f"/_train_indices_{ratios[0]}.pkl"
-        val_indices_filename = os.path.dirname(pkl_file) + f"/_val_indices_{ratios[1]}.pkl"
-        test_indices_filename = os.path.dirname(pkl_file) + f"/_test_indices_{ratios[2]}.pkl"
+        combined_filename = os.path.dirname(pkl_file) + f"/_patinets_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
 
-        if os.path.exists(split_info_filename) and os.path.exists(train_indices_filename) and os.path.exists(val_indices_filename) and os.path.exists(test_indices_filename):
+
+        if os.path.exists(combined_filename):
             print("\nSerialized splits found, loading ...\n")
             # Load existing split data
-            with open(split_info_filename, 'rb') as split_info_file:
-                split_info = pickle.load(split_info_file)
-            with open(train_indices_filename, 'rb') as train_indices_file:
-                train_indices = pickle.load(train_indices_file)
-            with open(val_indices_filename, 'rb') as val_indices_file:
-                val_indices = pickle.load(val_indices_file)
-            with open(test_indices_filename, 'rb') as test_indices_file:
-                test_indices = pickle.load(test_indices_file)
+            with open(combined_filename, 'rb') as combined_file:
+                all_sets_info = pickle.load(combined_file)
+            # Extract individual sets from the combined data
+            split_info = all_sets_info['split_info']
+            train_indices = all_sets_info['train_indices']
+            val_indices = all_sets_info['val_indices']
+            test_indices = all_sets_info['test_indices']
+            print(f"Train size: {len(train_indices)}, Test size: {len(test_indices)}, Val size: {len(val_indices)}")
             return train_indices, val_indices, test_indices, split_info
+        
         random.seed(rseed)
         
         if len(ratios) == 2:
@@ -339,36 +395,229 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
         print(f"Train size: {len(train_indices)}, Val size: {len(val_indices)}, Test size: {len(test_indices)}")
         # Serialize the split data for future use
         print(f"\nSerializing splits...\n") 
-        with open(split_info_filename, 'wb') as split_info_file:
-            pickle.dump(split_info, split_info_file)
-        with open(train_indices_filename, 'wb') as train_indices_file:
-            pickle.dump(train_indices, train_indices_file)
-        with open(val_indices_filename, 'wb') as val_indices_file:
-            pickle.dump(val_indices, val_indices_file)
-        with open(test_indices_filename, 'wb') as test_indices_file:
-            pickle.dump(test_indices, test_indices_file)
+        all_sets_info = {
+            'split_info': split_info,
+            'train_indices': train_indices,
+            'val_indices': val_indices,
+            'test_indices': test_indices
+        }
+        # Serialize the combined information
+        with open(combined_filename, 'wb') as combined_file:
+            pickle.dump(all_sets_info, combined_file)
+
             
             
         return train_indices, val_indices, test_indices, split_info   
             
- 
- 
+
+def reduce_set(seed, indices_set, perc=1.0):
+    random.seed(seed)
+    num_samples = int(len(indices_set) * perc)
+    indices = random.sample(indices_set, num_samples)
+    print(f"set reduction: {int(perc*100)}% (indices={len(indices)})")
+    return indices
+
             
-def reduce_sets(seed, train, val=[], test=[], perc=1.0):
+def reduce_sets(seed, train=[], val=[], test=[], perc=1.0):
     random.seed(seed)
 # Compute length of subsets
     num_train_samples = int(len(train) * perc)
     num_test_samples = int(len(test) * perc)
 
     # Create random subsets
-    train_indices = random.sample(range(len(train)), num_train_samples)
-    test_indices = random.sample(range(len(test)), num_test_samples)
+    train_indices = random.sample(train, num_train_samples)
+    test_indices = random.sample(test, num_test_samples)
     
     if val:
         num_val_samples = int(len(val) * perc)
-        val_indices = random.sample(range(len(val)), num_val_samples)
+        val_indices = random.sample(val, num_val_samples)
         print(f"dataset reduction: {int(perc*100)}% (train={len(train_indices)}, val={len(val_indices)}, test={len(test_indices)})")
         return train_indices, val_indices, test_indices
     
     print(f"dataset reduction: {int(perc*100)}% (train={len(train_indices)}, test={len(test_indices)})")
     return train_indices, test_indices
+
+def split_dataset_videos(rseed, dataset, pkl_file, ratios=[0.8, 0.1, 0.2]):
+    """
+    Split the dataset into training and test subsets based on a given pickle file, considering videos at the patient level.
+
+    Parameters:
+        rseed (int): The seed for random number generation.
+        dataset (HDF5Dataset): The HDF5 dataset.
+        pkl_file (str): The path to the pickle file.
+        ratios (list): A list of ratios for the train and test sets. The sum of ratios should be 1.0.
+
+    Returns:
+        train_indices (list): The indices of the training set.
+        test_indices (list): The indices of the test set.
+        split_info (dict): A dictionary containing various statistics and information about the split.
+
+    Raises:
+        FileNotFoundError: If the pickle file does not exist.
+    """
+    # Adjust the filenames for combined pickle file
+    combined_filename = os.path.dirname(pkl_file) + f"/_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
+
+    if os.path.exists(combined_filename):
+        print("\nSerialized splits found, loading ...\n")
+        # Load existing combined data
+        with open(combined_filename, 'rb') as combined_file:
+            all_sets_info = pickle.load(combined_file)
+
+        # Extract individual sets from the combined data
+        split_info = all_sets_info['split_info']
+        train_indices = all_sets_info['train_indices']
+        val_indices = all_sets_info['val_indices']
+        test_indices = all_sets_info['test_indices']
+        print(f"Train size: {len(train_indices)}, Test size: {len(test_indices)}, Val size: {len(val_indices)}")
+            
+        return train_indices, val_indices, test_indices, split_info
+
+    random.seed(rseed)
+
+    # 0. Gather the metadata
+    medical_center_patients, data_index, data_map_idxs_pcm, score_counts, labels = _load_dsdata_pickle(dataset, pkl_file)
+
+    # 1. Calculate the target number of videos for each split
+    total_videos = len(set(video_info[1] for video_info in dataset.frame_index_map.values()))
+    train_videos_count = int(total_videos * ratios[0])
+    test_videos_count = total_videos - train_videos_count
+    val_videos_count = int(train_videos_count * ratios[1])
+    train_videos_count = train_videos_count - val_videos_count
+
+    dataset_videos = set(video_info for video_info in dataset.frame_index_map.values())
+    
+    # 2. Splitting the dataset by patients taking into account video ratio
+    train_videos = set()
+    test_videos = set()
+    val_videos = set()
+    
+
+    # 2.1 Test set
+    while len(test_videos) < test_videos_count:
+        # pick randomly a video from the dataset and add it to the set
+        video_info = random.choice(list(dataset_videos - test_videos))
+        test_videos.add(video_info)
+        # get the video group name and video name and use them to retrieve the patient and medical center
+        group_name, video_name = video_info
+        video_patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        video_cetner = dataset.h5file[group_name][video_name].attrs["medical_center"]
+
+        # check if the patient in that medical center has other videos
+        for other_video in list(dataset_videos - test_videos):
+            other_group_name, other_video_name = other_video
+            patient = dataset.h5file[other_group_name][other_video_name].attrs["patient"]
+            center = dataset.h5file[other_group_name][other_video_name].attrs["medical_center"]
+            if(patient == video_patient and center == video_cetner):
+                test_videos.add(other_video)
+    
+    train_val_videos = dataset_videos - test_videos
+    # 2.2 Val set
+    while len(val_videos) < val_videos_count:
+        # pick randomly a video from the dataset and add it to the set
+        video_info = random.choice(list(train_val_videos - val_videos))
+        val_videos.add(video_info)
+        # get the video group name and video name and use them to retrieve the patient and medical center
+        group_name, video_name = video_info
+        video_patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        video_cetner = dataset.h5file[group_name][video_name].attrs["medical_center"]
+
+        # check if the patient in that medical center has other videos
+        for other_video in list(train_val_videos - val_videos):
+            other_group_name, other_video_name = other_video
+            patient = dataset.h5file[other_group_name][other_video_name].attrs["patient"]
+            center = dataset.h5file[other_group_name][other_video_name].attrs["medical_center"]
+            if(patient == video_patient and center == video_cetner):
+                val_videos.add(other_video)
+
+    # 2.3 Training set
+    train_videos.update(video_info for video_info in train_val_videos-val_videos)
+
+    # 3. Create indices
+    train_indices = [index for index, video_info in dataset.frame_index_map.items() if video_info in train_videos]
+    test_indices = [index for index, video_info in dataset.frame_index_map.items() if video_info in test_videos]
+    val_indices = [index for index, video_info in dataset.frame_index_map.items() if video_info in val_videos]
+    
+    
+    # 4. Get the number of videos and frames for each patient-center combination
+    test_videos_per_patient = defaultdict(int)
+    test_frames_per_patient = defaultdict(int)
+
+    for video_info in test_videos:
+        group_name, video_name = video_info
+        patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        center = dataset.h5file[group_name][video_name].attrs["medical_center"]
+        test_videos_per_patient[(center, patient)] += 1
+        test_frames_per_patient[(center, patient)] += len(dataset.h5file[group_name][video_name]['frames'])
+
+    train_videos_per_patient = defaultdict(int)
+    train_frames_per_patient = defaultdict(int)
+
+    for video_info in train_videos:
+        group_name, video_name = video_info
+        patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        center = dataset.h5file[group_name][video_name].attrs["medical_center"]
+        train_videos_per_patient[(center, patient)] += 1
+        train_frames_per_patient[(center, patient)] += len(dataset.h5file[group_name][video_name]['frames'])
+        
+    val_videos_per_patient = defaultdict(int)
+    val_frames_per_patient = defaultdict(int)
+
+    for video_info in val_videos:
+        group_name, video_name = video_info
+        patient = dataset.h5file[group_name][video_name].attrs["patient"]
+        center = dataset.h5file[group_name][video_name].attrs["medical_center"]
+        val_videos_per_patient[(center, patient)] += 1
+        val_frames_per_patient[(center, patient)] += len(dataset.h5file[group_name][video_name]['frames'])
+
+        
+    # 4. Diagnostic checks and return values
+    total_videos_calc = len(set(video_info[1] for video_info in train_videos)) + \
+                        len(set(video_info[1] for video_info in test_videos)) +\
+                        len(set(video_info[1] for video_info in val_videos))
+    if total_videos != total_videos_calc:
+        print(f"dataset splitting gone wrong (expected: {total_videos}, got:{total_videos_calc})")
+
+    # Sum up statistics info
+    split_info = {
+        'train_indices': train_indices,
+        'train_videos': train_videos,
+        'test_indices': test_indices,
+        'test_videos': test_videos,
+        'val_indices': val_indices,
+        'val_videos': val_videos,
+        
+        'train_videos_per_patient': train_videos_per_patient,
+        'train_frames_per_patient': train_frames_per_patient,
+        
+        'test_videos_per_patient': test_videos_per_patient,
+        'test_frames_per_patient': test_frames_per_patient, 
+        
+        'val_videos_per_patient': val_videos_per_patient,
+        'val_frames_per_patient': val_frames_per_patient,
+
+        'data_map_idxs_pcm': data_map_idxs_pcm,
+        'medical_center_patients': medical_center_patients,
+
+        'score_counts': score_counts,
+        'labels': labels,
+        'train_videos_count': train_videos_count,
+        'test_videos_count': test_videos_count
+    }
+
+    print(f"Train size: {len(train_indices)}, Test size: {len(test_indices)}, Val size: {len(val_indices)}")
+    # Serialize the split data for future use
+    print(f"\nSerializing splits...\n")
+    # Create a dictionary to store all information
+    all_sets_info = {
+        'split_info': split_info,
+        'train_indices': train_indices,
+        'val_indices': val_indices,
+        'test_indices': test_indices
+    }
+
+    # Serialize the combined information
+    with open(combined_filename, 'wb') as combined_file:
+        pickle.dump(all_sets_info, combined_file)
+
+    return train_indices, val_indices, test_indices, split_info

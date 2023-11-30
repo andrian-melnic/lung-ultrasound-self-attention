@@ -40,25 +40,12 @@ if __name__ == "__main__":
     import sys
     sys.path.append(working_dir)
     from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_sets
-    # from dataset import RichHDF5Dataset, HDF5Dataset, split_strategy, plot_split_graphs, reduce_sets
-    # from lightning_modules.ViTLightningModule import ViTLightningModule
-    # from lightning_modules.ResNet18LightningModule import ResNet18LightningModule
-    # from lightning_modules.BEiTLightningModule import BEiTLightningModule
     from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
     from lightning_modules.LUSDataModule import LUSDataModule
-    # from lightning_modules.ConfusionMatrixCallback import ConfusionMatrixCallback
 
 # ---------------------------------- Dataset --------------------------------- #
 
-    sets, split_info = get_sets(
-        args.rseed,
-        data_file,
-        args.hospitaldict_path,
-        args.train_ratio,
-        args.trim_data,
-        args.pretrained
-    )
-
+    sets, split_info = get_sets(args)
     lus_data_module = LUSDataModule(sets["train"], 
                                     sets["test"],
                                     sets["val"],
@@ -66,14 +53,14 @@ if __name__ == "__main__":
                                     args.batch_size,
                                     args.mixup)
 
-    print("- Train set class weights: ")
+    print("\n- Train set class weights: ")
     train_weight_tensor = get_class_weights(sets["train_indices"], split_info)
     print("\n- Val set class weights: ")
     get_class_weights(sets["val_indices"], split_info)
     print("\n- Test set class weights: ")
     get_class_weights(sets["test_indices"], split_info)
 # ---------------------------------------------------------------------------- #
-    #                         Model & trainer configuration                        #
+#                         Model & trainer configuration                        #
 # ---------------------------------------------------------------------------- #
 
 # ------------------- Model hyperparameters & instantiation ------------------ #
@@ -81,11 +68,6 @@ if __name__ == "__main__":
     print("\n\nModel configuration...")
     print('=' * 80)
 
-    # configuration = {
-    #     "num_labels": 4,
-    #     "num_attention_heads": 4,
-    #     "num_hidden_layers":4
-    # }
     hyperparameters = {
     "num_classes": 4,
     "optimizer": args.optimizer,
@@ -95,8 +77,6 @@ if __name__ == "__main__":
     "momentum": args.momentum,
     "label_smoothing": args.label_smoothing,
     "drop_rate":args.drop_rate
-    #   "class_weights": class_weights
-    #   "configuration": configuration
     }
     freeze_layers = None
     if args.pretrained:
@@ -108,7 +88,7 @@ if __name__ == "__main__":
                                     class_weights=train_weight_tensor,
                                     pretrained=args.pretrained,
                                     freeze_layers=freeze_layers,
-                                    augmentation=args.augmentation)
+                                    show_model_summary=args.summary)
 
     generate_table(f"{args.model} Hyperparameters", hyperparameters, ["train_dataset", "test_dataset"])
 # --------------------------- Trainer configuration -------------------------- #
@@ -137,11 +117,6 @@ if __name__ == "__main__":
     }
     # Trainer 
     trainer = Trainer(**trainer_args,
-                    #   detect_anomaly=True,
-                    #   overfit_batches=0.01,
-                    #   val_check_interval=0.25,
-                    #   gradient_clip_val=0.1,
-                        # benchmark=True,
                         accelerator="gpu",
                         default_root_dir = checkpoint_dir,
                         devices=1)

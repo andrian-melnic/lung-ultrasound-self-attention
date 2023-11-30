@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 
 from timm.data.mixup import Mixup
 mixup_args = {
-    'mixup_alpha': 0.8,
+    'mixup_alpha': 0.4,
     'cutmix_alpha': 0,
     'prob': 1,
     'switch_prob': 0.,
@@ -63,4 +63,5 @@ class LUSDataModule(pl.LightningDataModule):
                           num_workers=self.num_workers,
                           pin_memory=True,
                           persistent_workers=self.persistent_workers,
-                          collate_fn=collate_fn)
+                          collate_fn=collate_fn,
+                          shuffle=True)
