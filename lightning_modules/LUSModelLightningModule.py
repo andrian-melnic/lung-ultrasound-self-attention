@@ -10,7 +10,7 @@ from torchvision import models
 import torchvision.transforms.functional as TF
 
 # PyTorch Lightning
-import lightning.pytorch as pl
+import pytorch_lightning as pl
 
 # Third-party libraries
 from kornia import tensor_to_image

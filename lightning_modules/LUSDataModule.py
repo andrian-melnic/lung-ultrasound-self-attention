@@ -1,4 +1,4 @@
-import lightning.pytorch as pl
+import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
 

@@ -9,14 +9,12 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch import Trainer
-from lightning.pytorch.tuner import Tuner
 
 import args_processing
 from utils import *
 from callbacks import *
 from run_model import *
 from get_sets import get_sets, get_class_weights
-
 from ray.train.lightning import (
     RayDDPStrategy,
     RayLightningEnvironment,
@@ -27,7 +25,6 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler
 from ray.train.torch import TorchTrainer
 from ray.train import RunConfig, ScalingConfig, CheckpointConfig
-
 args = args_processing.parse_arguments()
 
 print("\n" + "-"*80 + "\n")
@@ -120,15 +117,15 @@ def train_func(config):
     trainer = pl.Trainer(
         max_epochs=10,
         devices="auto",
-        accelerator="auto",
+        accelerator="gpu",
         callbacks=callbacks,
         logger=logger,
-        strategy=ray.train.lightning.RayDDPStrategy(),
-        plugins=[ray.train.lightning.RayLightningEnvironment()],
+        strategy=RayDDPStrategy(),
+        plugins=[RayLightningEnvironment()],
         enable_progress_bar=False,
     )
     
-    trainer = ray.train.lightning.prepare_trainer(trainer)
+    trainer = prepare_trainer(trainer)
     trainer.fit(model, datamodule=data_module)
 
 
@@ -142,7 +139,7 @@ search_space = {
 
 
 scheduler = ASHAScheduler(max_t=5, grace_period=1, reduction_factor=2)
-scaling_config = ScalingConfig(num_workers=1, use_gpu=True)
+# scaling_config = ScalingConfig(num_workers=1, use_gpu=True)
 run_config = RunConfig(
     checkpoint_config=CheckpointConfig(
         num_to_keep=2,
@@ -152,7 +149,7 @@ run_config = RunConfig(
 )
 ray_trainer = TorchTrainer(
     train_func,
-    scaling_config=scaling_config,
+    # scaling_config=scaling_config,
     run_config=run_config,
 )
 tuner = tune.Tuner(
