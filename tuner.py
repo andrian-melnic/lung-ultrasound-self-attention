@@ -24,7 +24,6 @@ def train_function(model, data_module):
 def tune_model(ray_trainer, num_epochs, num_samples=10):
     search_space = {
         "lr": tune.loguniform(1e-4, 1e-2),
-        "accumulate_grad_batches": tune.choice([1, 4, 8, 16, 32]),
         "optimizer": tune.choice(["adam", "sgd", "adamw"]),
         "weight_decay": tune.choice([0.0, 0.005, 0.001, 0.0005]),
         "drop_rate": tune.choice([0.0, 0.1, 0.2]),
@@ -37,7 +36,7 @@ def tune_model(ray_trainer, num_epochs, num_samples=10):
         ray_trainer,
         param_space={"train_loop_config": search_space},
         tune_config=tune.TuneConfig(
-            metric="ptl/val_loss",
+            metric="val_loss",
             mode="min",
             num_samples=num_samples,
             scheduler=scheduler,

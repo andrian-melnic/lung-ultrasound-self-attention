@@ -50,15 +50,7 @@ if __name__ == "__main__":
 
 # ---------------------------------- Dataset --------------------------------- #
 
-    sets, split_info = get_sets(
-        args.rseed,
-        data_file,
-        args.hospitaldict_path,
-        args.train_ratio,
-        args.trim_data,
-        args.pretrained
-    )
-
+    sets, split_info = get_sets(args)
     lus_data_module = LUSDataModule(sets["train"], 
                                     sets["test"],
                                     sets["val"],
@@ -73,7 +65,7 @@ if __name__ == "__main__":
     print("\n- Test set class weights: ")
     get_class_weights(sets["test_indices"], split_info)
 # ---------------------------------------------------------------------------- #
-    #                         Model & trainer configuration                        #
+#                         Model & trainer configuration                        #
 # ---------------------------------------------------------------------------- #
 # ------------------- Model hyperparameters & instantiation ------------------ #
 
@@ -101,37 +93,30 @@ if __name__ == "__main__":
                                     class_weights=train_weight_tensor,
                                     pretrained=args.pretrained,
                                     freeze_layers=freeze_layers,
-                                    augmentation=args.augmentation)
+                                    show_model_summary=args.summary)
 
     generate_table(f"{args.model} Hyperparameters", hyperparameters, ["train_dataset", "test_dataset"])
 
 
-# ---------------------------- Model fit and test ---------------------------- #
-    if args.mode == "train":
-        fit_model(model, trainer, lus_data_module, args.chkp)
-    if args.mode == "test":
-        test_model(model, trainer, lus_data_module, args.chkp)
-        
-    if args.mode == "tune":
-        
-        scaling_config = ScalingConfig(
-            num_workers=args.num_workers, use_gpu=True, resources_per_worker={"CPU": 1, "GPU": 1}
-        )
+    scaling_config = ScalingConfig(
+        num_workers=args.num_workers, use_gpu=True, resources_per_worker={"CPU": 1, "GPU": 1}
+    )
 
-        run_config = RunConfig(
-            checkpoint_config=CheckpointConfig(
-                num_to_keep=2,
-                checkpoint_score_attribute="val_loss",
-                checkpoint_score_order="min",
-            ),
-        )
-        # Define a TorchTrainer without hyper-parameters for Tuner
-        ray_trainer = TorchTrainer(
-            train_function(model, lus_data_module),
-            scaling_config=scaling_config,
-            run_config=run_config,
-        )
-        results = tune_model(ray_trainer, args.max_epochs, num_samples=10)
+    run_config = RunConfig(
+        checkpoint_config=CheckpointConfig(
+            num_to_keep=2,
+            checkpoint_score_attribute="val_loss",
+            checkpoint_score_order="min",
+        ),
+    )
+    # Define a TorchTrainer without hyper-parameters for Tuner
+    ray_trainer = TorchTrainer(
+        train_function,
+        train_loop_config={model, lus_data_module},
+        scaling_config=scaling_config,
+        run_config=run_config,
+    )
+    results = tune_model(ray_trainer, args.max_epochs, num_samples=10)
 
 
 

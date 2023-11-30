@@ -142,6 +142,7 @@ if args.mode == "tune":
                   min_lr=1e-05,
                   max_lr=0.1,
                   mode="exponential",
+                  num_training=1000
                   )
 
 
