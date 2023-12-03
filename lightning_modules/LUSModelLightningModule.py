@@ -13,7 +13,6 @@ import torchvision.transforms.functional as TF
 import pytorch_lightning as pl
 
 # Third-party libraries
-from kornia import tensor_to_image
 import timm
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -24,6 +23,7 @@ from torchvision.models import ResNet18_Weights, ResNet50_Weights
 from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
+from DataAugmentation import DataAugmentation
 
 # Metrics and evaluation
 from torchmetrics.classification import MulticlassF1Score, Accuracy
@@ -40,7 +40,8 @@ class LUSModelLightningModule(pl.LightningModule):
                  class_weights=None,
                  freeze_layers=None,
                  pretrained=False,
-                 show_model_summary=False):
+                 show_model_summary=False,
+                 augmentation=False):
         
         super(LUSModelLightningModule, self).__init__()
         
@@ -57,6 +58,7 @@ class LUSModelLightningModule(pl.LightningModule):
         self.pretrained = pretrained
         self.freeze_layers = freeze_layers
         self.show_model_summary = show_model_summary
+        self.augmentation = augmentation
         
 # ----------------------------------- Model ---------------------------------- #
 
@@ -76,29 +78,6 @@ class LUSModelLightningModule(pl.LightningModule):
                                   heads=4)
 
 # --------------------------------- resnet --------------------------------- #
-        # if "resnet18" in model_name:
-        #     self.model = models.resnet18(pretrained=pretrained)
-        #     self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
-        #     print(f"\nUsing pretrained weights {self.pretrained}\n")
-        #     if self.pretrained:
-        #         # List of layers to exclude from freezing
-        #         excluded_layers = ['fc', 'layer3', 'layer4']
-        #         self.freeze_layers_with_exclusion(excluded_layers)
-        # if self.show_model_summary:
-        #     self.print_layers_req_grad()
-                
-        # elif "resnet50" in model_name:
-        #     self.model = models.resnet50(pretrained=pretrained)
-        #     self.model.fc = nn.Linear(self.model.fc.in_features, self.num_classes)
-        #     print(f"\nUsing pretrained weights {self.pretrained}\n")
-        #     if self.pretrained:
-        #         # List of layers to exclude from freezing
-        #         excluded_layers = ['fc', 'layer3', 'layer4']
-        #         self.freeze_layers_with_exclusion(excluded_layers)
-        # if self.show_model_summary:
-        #     self.print_layers_req_grad()
-                
-                
         if "resnet" in model_name :   
             # torch image models resnet18/50
             if "resnet10t" in model_name:
@@ -118,7 +97,7 @@ class LUSModelLightningModule(pl.LightningModule):
                 self.freeze_layers_with_exclusion(excluded_layers)
                 if self.show_model_summary:
                     self.print_layers_req_grad()
-            
+                    
 # -------------------------------- timm_botnet ------------------------------- #
         elif model_name == "timm_bot":
             print(f"\nUsing pretrained weights {self.pretrained}\n")
@@ -165,6 +144,9 @@ class LUSModelLightningModule(pl.LightningModule):
             #         dropout = 0.1,
             #         emb_dropout = 0.1
             #     )
+# ------------------------------ Data processing ----------------------------- #
+        print(f"Using augmentation: {self.augmentation}")
+        self.transform = DataAugmentation()
 # ------------------------------------ HP ------------------------------------ #
         if show_model_summary:
             print(f"\nModel summary:\n{self.model}")
@@ -229,7 +211,13 @@ class LUSModelLightningModule(pl.LightningModule):
         }
         
         return [optimizer], [scheduler]
-
+    
+    def on_after_batch_transfer(self, batch, dataloader_idx):
+        x, y = batch
+        if self.trainer.training and self.augmentation:
+            x = self.transform(x)  # => we perform GPU/Batched data augmentation
+        return x, y
+    
     def forward(self, x):
         return self.model(x)
 

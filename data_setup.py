@@ -21,7 +21,7 @@ class HDF5Dataset(Dataset):
     def __init__(self, file_path):
         self.file_path = file_path
         self.index_map_path = os.path.dirname(file_path) + "/frame_index_map.pkl"
-        self.h5file = h5py.File(file_path, 'r')
+        self.h5file = h5py.File(file_path, 'r', libver='latest', swmr=True, rdcc_nbytes=10 * (1024**3))
         self.group_names = list(self.h5file.keys())
         self.total_videos = sum(len(self.h5file[group_name]) for group_name in self.group_names)
         self.check_for_index_map()
@@ -223,8 +223,7 @@ class FrameTargetDataset(Dataset):
             transforms.ToTensor()
         ])
         if self.transform:
-            frame_tensor = self.transform(image=frame_data)
-            frame_tensor = frame_tensor["image"]    
+            frame_tensor = self.transform(frame_data)
         else:
             frame_tensor = norm_transforms(frame_data)
         # Target data to integer scores

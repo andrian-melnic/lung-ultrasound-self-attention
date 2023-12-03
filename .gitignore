@@ -14,6 +14,7 @@ tb_logs/
 build/
 develop-eggs/
 data/
+dataset_tfrecords/
 dist/
 downloads/
 eggs/
