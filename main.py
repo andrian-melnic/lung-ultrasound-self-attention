@@ -88,7 +88,8 @@ if __name__ == "__main__":
                                     class_weights=train_weight_tensor,
                                     pretrained=args.pretrained,
                                     freeze_layers=freeze_layers,
-                                    show_model_summary=args.summary)
+                                    show_model_summary=args.summary,
+                                    augmentation=args.augmentation)
 
     generate_table(f"{args.model} Hyperparameters", hyperparameters, ["train_dataset", "test_dataset"])
 # --------------------------- Trainer configuration -------------------------- #

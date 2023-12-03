@@ -223,8 +223,7 @@ class FrameTargetDataset(Dataset):
             transforms.ToTensor()
         ])
         if self.transform:
-            frame_tensor = self.transform(image=frame_data)
-            frame_tensor = frame_tensor["image"]    
+            frame_tensor = self.transform(frame_data)
         else:
             frame_tensor = norm_transforms(frame_data)
         # Target data to integer scores

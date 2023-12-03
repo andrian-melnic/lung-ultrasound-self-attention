@@ -1,14 +1,15 @@
 import kornia.augmentation as K
 import kornia.geometry as KG
+import kornia
+from kornia import image_to_tensor, tensor_to_image
 import math
 import os
 import torch
 import torch.nn as nn
+import numpy as np
 from torchvision import transforms
 import torchvision.transforms.functional as F
-from PIL import Image
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
+from torch import Tensor
 
 # ---------------------------------------------------------------------------- #
 #                               DataAugmentation                               #
@@ -35,70 +36,48 @@ class DataAugmentation(nn.Module):
         #     # K.RandomVerticalFlip(p=0.3)
         # )
         
-        self.image_mean = [0.124, 0.1274, 0.131]
-        self.image_std = [0.1621, 0.1658, 0.1717]
-        self.transforms = A.Compose([
-            A.Affine(rotate=(-15, 15), scale=(1.1, 1.25), keep_ratio=True, p=0.3),
-            A.Rotate(limit=15, p=0.3),
-            A.HorizontalFlip(p=0.5),
-            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
-            A.RandomGamma(gamma_limit=(80, 120), p=0.5),
-            A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-        ])
-        # self.transforms = nn.Sequential(
-        #     K.RandomAffine(degrees=(-15, 15), scale=(1.1, 1.25), p=0.5),
-        #     K.RandomRotation(degrees=(-15, 15), p=0.3),
-        #     K.RandomHorizontalFlip(p=0.5),
-        #     K.RandomBrightness(brightness=(0.85,0.95), p=0.5),
-        #     K.RandomContrast(contrast=(0.9, 1.2), p=0.3),
-        #     K.RandomGamma(gamma=(0.8, 1.), gain=(1., 1.), p=0.5),
-        #     transforms.Normalize(mean=self.image_mean, std=self.image_std)
-        # )
+        self.image_mean = [0.12768, 0.13132, 0.13534]
+        self.image_std = [0.1629, 0.16679, 0.17305]
+        self.transforms = nn.Sequential(
+            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.5), translate=(0.2, 0.2), p=1),
+            K.RandomHorizontalFlip(p=0.5),
+            # K.RandomElasticTransform(alpha=0.5, sigma=25, p=0.5),
+            K.RandomBrightness(brightness=(0.85,0.95), p=0.5),
+            K.RandomContrast(contrast=(0.9, 1.2), p=0.3),
+            K.RandomGamma(gamma=(0.8, 1.), gain=(1., 1.), p=0.5),
+            K.Normalize(mean=self.image_mean, std=self.image_std, p=1)
+        )
         print(self.transforms)
 
     @torch.no_grad()  # disable gradients for efficiency
     def forward(self, x):
-        x_out = self.transforms(image=x)
+        x_out = self.transforms(x)
         # x_out = self.us_classification_augmentation(x)
-        return x_out["image"]
+        return x_out
 
-    def _do_nothing(self, image):
-        return image
+class Preprocess(nn.Module):
+    """Module to perform pre-process using Kornia on torch tensors."""
+    def __init__(self):
+        super().__init__()
+        # self.image_mean = torch.tensor([0.12768, 0.13132, 0.13534])
+        # self.image_std = torch.tensor([0.1629, 0.16679, 0.17305])
+        self.image_mean = [0.12768, 0.13132, 0.13534]
+        self.image_std = [0.1629, 0.16679, 0.17305]
+        
+    @torch.no_grad()  # disable gradients for effiency
+    def forward(self, x) -> Tensor:
+        x_tmp: np.ndarray = np.array(x)  # HxWxC
+        x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
+        x_out = KG.transform.resize(x_out, size=(224, 224))
+        x_out = K.Normalize(mean=self.image_mean, std=self.image_std, p=1, keepdim=True)(x_out.float() / 255.0)
+        return x_out
+    
+class TrainPreprocess(nn.Module):
+    """Module to perform pre-process using Kornia on torch tensors."""
 
-    def _random_true_false(self):
-        prob = torch.rand(1)
-        predicate = prob < 0.5
-        return predicate
-
-    def _image_and_label_flip_up_down(self, image):
-        image_flip = KG.vflip(image)
-        return image_flip
-
-    def _image_and_label_flip_left_right(self, image):
-        image_flip = KG.hflip(image)
-        return image_flip
-
-    def _image_random_flip_left_right(self, image):
-        predicate = self._random_true_false()
-        image_aug = self._image_and_label_flip_left_right(image) if predicate else self._do_nothing(image)
-        # image_aug = torch.where(predicate, self._image_and_label_flip_left_right(image), self._do_nothing(image))
-        return image_aug
-
-    def _image_random_flip_up_down(self, image):
-        predicate = self._random_true_false()
-        image_aug = self._image_and_label_flip_up_down(image) if predicate else self._do_nothing(image)
-        # image_aug = torch.where(predicate, self._image_and_label_flip_up_down(image), self._do_nothing(image))
-        return image_aug
-
-    def us_classification_augmentation(self, image):
-        img = self._image_random_flip_left_right(image)
-        img = self._image_random_flip_up_down(img)
-        gamma = torch.rand(1) * 1.4 + 0.3
-        img = torch.pow(img, gamma)
-        img /= torch.max(img)
-        size_r = int(torch.rand(1) * 0.5 + 1.5) * 320
-        angle_r = (torch.rand(1) * 60 - 30) * math.pi / 180
-        img = F.resize(img, size_r, interpolation=Image.BILINEAR)
-        img = F.resize(img, 224, interpolation=Image.BILINEAR)
-        img = KG.rotate(img, angle_r, mode='bilinear')
-        return img
+    @torch.no_grad()  # disable gradients for effiency
+    def forward(self, x) -> Tensor:
+        x_tmp: np.ndarray = np.array(x)  # HxWxC
+        x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
+        x_out = KG.transform.resize(x_out, size=(224, 224))
+        return x_out.float() / 255.0

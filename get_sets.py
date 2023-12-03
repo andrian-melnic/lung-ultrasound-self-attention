@@ -13,6 +13,7 @@ import cv2
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from torchvision import transforms
+from DataAugmentation import Preprocess, TrainPreprocess
 
 
 def create_default_dict():
@@ -32,47 +33,47 @@ def get_sets(args):
     image_std = (0.1629, 0.16679, 0.17305)
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
-    test_transforms = A.Compose([
-        A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
-        A.Normalize(mean=image_mean, std=image_std),
-        ToTensorV2(),
-    ])
-    
-    if args.augmentation:
-        train_transforms = A.Compose([
-            A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
+    # test_transforms = A.Compose([
+    #     A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
+    #     A.Normalize(mean=image_mean, std=image_std),
+    #     ToTensorV2(),
+    # ])
+    test_transforms = Preprocess()
+    train_transforms = TrainPreprocess()
+    # if args.augmentation:
+    #     train_transforms = A.Compose([
+    #         A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
             
-            # Spatial level transforms
-            A.ShiftScaleRotate(shift_limit=0.1, 
-                               rotate_limit=23, 
-                               scale_limit=(0.1, 0.5), 
-                               p=0.5, 
-                               interpolation=cv2.INTER_CUBIC, 
-                               border_mode=cv2.BORDER_CONSTANT),
-            A.ElasticTransform(alpha=0.5,
-                               sigma=25,
-                               alpha_affine=15,
-                               interpolation=cv2.INTER_CUBIC,
-                               p=0.5,
-                               border_mode=cv2.BORDER_CONSTANT),
-            A.HorizontalFlip(p=0.5),
+    #         # Spatial level transforms
+    #         A.ShiftScaleRotate(shift_limit=0.1, 
+    #                            rotate_limit=23, 
+    #                            scale_limit=(0.1, 0.5), 
+    #                            p=0.5, 
+    #                            interpolation=cv2.INTER_CUBIC, 
+    #                            border_mode=cv2.BORDER_CONSTANT),
+    #         A.ElasticTransform(alpha=0.5,
+    #                            sigma=25,
+    #                            alpha_affine=15,
+    #                            interpolation=cv2.INTER_CUBIC,
+    #                            p=0.5,
+    #                            border_mode=cv2.BORDER_CONSTANT),
+    #         A.HorizontalFlip(p=0.5),
             
-            # Pixel level transforms
-            A.GaussianBlur(blur_limit=(3,3), p=0.5),
-            A.GaussNoise(p=0.5),
-            # A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
-            A.RandomGamma(gamma_limit=(90, 110), p=0.5),
+    #         # Pixel level transforms
+    #         A.GaussianBlur(blur_limit=(3,3), p=0.5),
+    #         A.GaussNoise(p=0.5),
+    #         # A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
+    #         A.RandomGamma(gamma_limit=(90, 110), p=0.5),
             
             
-            A.Normalize(mean=image_mean, std=image_std),
-            ToTensorV2(),
-        ])
-        print(f"Using Augmentations: {args.augmentation}")
+    #         A.Normalize(mean=image_mean, std=image_std),
+    #         ToTensorV2(),
+    #     ])
+    #     print(f"Using Augmentations: {args.augmentation}")
         
-    else:
-        # Use test_transforms if augmentation is not enabled
-        train_transforms = test_transforms
-    
+    # else:
+    #     # Use test_transforms if augmentation is not enabled
+    #     train_transforms = test_transforms
     dataset = HDF5Dataset(dataset_h5_path)
 
     train_indices = []
