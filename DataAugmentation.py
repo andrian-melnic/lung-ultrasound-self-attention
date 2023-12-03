@@ -68,7 +68,8 @@ class Preprocess(nn.Module):
     def forward(self, x) -> Tensor:
         x_tmp: np.ndarray = np.array(x)  # HxWxC
         x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
-        x_out = KG.transform.resize(x_out, size=(224, 224))
+        # x_out = KG.transform.Resize((224, 224), antialias=True)(x_out)
+        x_out = transforms.Resize((224, 224))(x_out)
         x_out = K.Normalize(mean=self.image_mean, std=self.image_std, p=1, keepdim=True)(x_out.float() / 255.0)
         return x_out
     
@@ -79,5 +80,6 @@ class TrainPreprocess(nn.Module):
     def forward(self, x) -> Tensor:
         x_tmp: np.ndarray = np.array(x)  # HxWxC
         x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
-        x_out = KG.transform.resize(x_out, size=(224, 224))
+        # x_out = KG.transform.Resize((224, 224), antialias=True)(x_out)
+        x_out = transforms.Resize((224, 224))(x_out)
         return x_out.float() / 255.0
