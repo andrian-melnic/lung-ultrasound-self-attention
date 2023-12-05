@@ -41,7 +41,6 @@ class DataAugmentation(nn.Module):
         self.transforms = nn.Sequential(
             K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.5), translate=(0.2, 0.2), p=1),
             K.RandomHorizontalFlip(p=0.5),
-            # K.RandomElasticTransform(alpha=0.5, sigma=25, p=0.5),
             K.RandomBrightness(brightness=(0.85,0.95), p=0.5),
             K.RandomContrast(contrast=(0.9, 1.2), p=0.3),
             K.RandomGamma(gamma=(0.8, 1.), gain=(1., 1.), p=0.5),

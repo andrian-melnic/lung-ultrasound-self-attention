@@ -117,7 +117,8 @@ class LUSModelLightningModule(pl.LightningModule):
         if model_name == 'swin_vit':
             
             print(f"\nUsing pretrained weights: {pretrained}\n")
-            self.model = timm.create_model('swin_base_patch4_window7_224.ms_in1k', 
+            # self.model = timm.create_model('swin_base_patch4_window7_224.ms_in1k', 
+            self.model = timm.create_model('swin_tiny_patch4_window7_224.ms_in22k', 
                                            pretrained=pretrained, 
                                            num_classes=self.num_classes,
                                            drop_rate=self.drop_rate)

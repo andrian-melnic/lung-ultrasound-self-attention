@@ -1,0 +1,56 @@
+INFO:root:
+Trial 0: ----------------------------------------
+INFO:root:  Params: {'lr': 0.008144451418778556, 'drop_rate': 0.4538451836339281, 'label_smoothing': 0.07422553233875186, 'weight_decay': 0.00016597407561065618, 'optimizer': 'sgd'}
+INFO:torch.distributed.nn.jit.instantiator:Created a temporary directory at /tmp/tmp7jxe3rqd
+INFO:torch.distributed.nn.jit.instantiator:Writing /tmp/tmp7jxe3rqd/_remote_module_non_scriptable.py
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 1: ----------------------------------------
+INFO:root:  Params: {'lr': 0.004017828538445038, 'drop_rate': 0.34049512519963937, 'label_smoothing': 0.026033819971680118, 'weight_decay': 0.00013866353027545774, 'optimizer': 'adamw'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 2: ----------------------------------------
+INFO:root:  Params: {'lr': 0.0075049455965155235, 'drop_rate': 0.4398237899097629, 'label_smoothing': 0.0036857411873739035, 'weight_decay': 0.0002683153636141731, 'optimizer': 'adam'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 3: ----------------------------------------
+INFO:root:  Params: {'lr': 0.006118578442463096, 'drop_rate': 0.21585887460331313, 'label_smoothing': 0.008834024630602155, 'weight_decay': 0.0007235417242770302, 'optimizer': 'adamw'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 4: ----------------------------------------
+INFO:root:  Params: {'lr': 0.009583112934194869, 'drop_rate': 0.21943395170594174, 'label_smoothing': 0.018633624221309764, 'weight_decay': 0.00044766583506479995, 'optimizer': 'sgd'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 5: ----------------------------------------
+INFO:root:  Params: {'lr': 0.002279167513175738, 'drop_rate': 0.40797055164808593, 'label_smoothing': 0.029672026353276648, 'weight_decay': 0.0008502606487824594, 'optimizer': 'adam'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 6: ----------------------------------------
+INFO:root:  Params: {'lr': 0.0030055878082984318, 'drop_rate': 0.37679700139541417, 'label_smoothing': 0.045757833341219606, 'weight_decay': 0.00018400678432623765, 'optimizer': 'adam'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 7: ----------------------------------------
+INFO:root:  Params: {'lr': 0.0036027372550119117, 'drop_rate': 0.3574505735286214, 'label_smoothing': 0.08495100715689351, 'weight_decay': 0.0006724497283902795, 'optimizer': 'sgd'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 8: ----------------------------------------
+INFO:root:  Params: {'lr': 0.0038387068250088957, 'drop_rate': 0.46176472878979336, 'label_smoothing': 0.07925588683586565, 'weight_decay': 0.0009663448391237648, 'optimizer': 'sgd'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Trial 9: ----------------------------------------
+INFO:root:  Params: {'lr': 0.003862916627083549, 'drop_rate': 0.1468577623435473, 'label_smoothing': 0.008670259743928389, 'weight_decay': 0.0006939055802117248, 'optimizer': 'sgd'}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
+INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:root:
+Number of finished trials: 10
+INFO:root:
+Best trial:

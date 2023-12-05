@@ -1,0 +1,5 @@
+INFO:root:
+Trial 0: ----------------------------------------
+INFO:root:  Params: {'lr': 0.009683599055585676, 'drop_rate': 0.38749187187285683, 'label_smoothing': 0.013305398939472092, 'weight_decay': 0.0008329930424001973, 'optimizer': 'adamw'}
+INFO:torch.distributed.nn.jit.instantiator:Created a temporary directory at /tmp/tmpyny8aztf
+INFO:torch.distributed.nn.jit.instantiator:Writing /tmp/tmpyny8aztf/_remote_module_non_scriptable.py
