@@ -27,7 +27,7 @@ from DataAugmentation import DataAugmentation
 
 # Metrics and evaluation
 from torchmetrics.classification import MulticlassF1Score, Accuracy
-from sklearn.metrics import confusion_matrix
+from torchmetrics.classification import MulticlassConfusionMatrix
 
 
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
@@ -117,7 +117,7 @@ class LUSModelLightningModule(pl.LightningModule):
         if model_name == 'swin_vit':
             
             print(f"\nUsing pretrained weights: {pretrained}\n")
-            self.model = timm.create_model('swin_base_patch4_window7_224.ms_in1k', 
+            self.model = timm.create_model('swin_tiny_patch4_window7_224.ms_in22k', 
                                            pretrained=pretrained, 
                                            num_classes=self.num_classes,
                                            drop_rate=self.drop_rate)
@@ -169,9 +169,13 @@ class LUSModelLightningModule(pl.LightningModule):
         self.val_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
         self.test_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
         
+        self.confmat = MulticlassConfusionMatrix(num_classes=self.num_classes)
+        
+        
         # Your model initialization here
         self.train_losses = []
         self.val_losses = []
+        self.cm = np.zeros((self.num_classes, self.num_classes))
 
         
 # ------------------------------ Methods & Hooks ----------------------------- #
@@ -262,13 +266,14 @@ class LUSModelLightningModule(pl.LightningModule):
         
         loss = self.cross_entropy(logits, y)
         
-        # Convert logits to predicted labels
-        preds = torch.argmax(logits, dim=1)
-        # Compute confusion matrix
-        cm = confusion_matrix(y.cpu().numpy(), preds.cpu().numpy())
+        # # Convert logits to predicted labels
+        # preds = torch.argmax(logits, dim=1)
+        # # Compute confusion matrix
+        # cm = confusion_matrix(y.cpu().numpy(), preds.cpu().numpy())
+        
+        self.cm += self.confmat(logits, y).cpu().numpy()
         
         # Log confusion matrix to TensorBoard
-        self.logger.experiment.add_figure('Confusion Matrix', self.plot_confusion_matrix(cm), self.current_epoch)
         self.test_acc(logits, y)
         self.test_f1(logits, y)
         self.log_dict({'test_loss': loss, 
@@ -276,10 +281,14 @@ class LUSModelLightningModule(pl.LightningModule):
                        'test_f1': self.test_f1}, prog_bar=True, on_epoch=True)
         return loss
     
-    def plot_confusion_matrix(self, cm):
+    def on_test_end(self):
+        self.logger.experiment.add_figure('Confusion Matrix', self.plot_confusion_matrix())
+        
+    def plot_confusion_matrix(self):
+        cm = self.cm
         class_names = [str(i) for i in range(len(cm))]
         fig, ax = plt.subplots(figsize=(len(class_names), len(class_names)))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=class_names, yticklabels=class_names)
+        sns.heatmap(cm, annot=True, cmap="Blues", xticklabels=class_names, yticklabels=class_names)
         plt.ylabel('Actual')
         plt.xlabel('Predicted')
         plt.title('Confusion Matrix')
