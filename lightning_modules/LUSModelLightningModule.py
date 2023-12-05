@@ -26,8 +26,11 @@ from vit_pytorch import ViT, SimpleViT
 from DataAugmentation import DataAugmentation
 
 # Metrics and evaluation
-from torchmetrics.classification import MulticlassF1Score, Accuracy
-from torchmetrics.classification import MulticlassConfusionMatrix
+from torchmetrics.classification import (MulticlassF1Score, 
+                                         Accuracy,
+                                         MulticlassConfusionMatrix,
+                                         MulticlassAUROC,
+                                         MulticlassROC)
 
 
 id2label = {0: 'no', 1: 'yellow', 2: 'orange', 3: 'red'}
@@ -165,17 +168,18 @@ class LUSModelLightningModule(pl.LightningModule):
         self.val_f1 = MulticlassF1Score(num_classes=self.num_classes, average="weighted")
         self.test_f1 = MulticlassF1Score(num_classes=self.num_classes, average="weighted")
         
-        self.train_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
-        self.val_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
-        self.test_acc = Accuracy(task='multiclass', num_classes=self.num_classes)
+        self.train_acc = Accuracy(task="multiclass", num_classes=self.num_classes)
+        self.val_acc = Accuracy(task="multiclass", num_classes=self.num_classes)
+        self.test_acc = Accuracy(task="multiclass", num_classes=self.num_classes)
         
-        self.confmat = MulticlassConfusionMatrix(num_classes=self.num_classes)
+        self.confmat_metric = MulticlassConfusionMatrix(num_classes=self.num_classes)
+        self.auroc_metric = MulticlassAUROC(num_classes=self.num_classes, average='weighted')
+        self.roc_metric = MulticlassROC(num_classes=self.num_classes)
         
         
         # Your model initialization here
         self.train_losses = []
         self.val_losses = []
-        self.cm = np.zeros((self.num_classes, self.num_classes))
 
         
 # ------------------------------ Methods & Hooks ----------------------------- #
@@ -266,35 +270,25 @@ class LUSModelLightningModule(pl.LightningModule):
         
         loss = self.cross_entropy(logits, y)
         
-        # # Convert logits to predicted labels
-        # preds = torch.argmax(logits, dim=1)
-        # # Compute confusion matrix
-        # cm = confusion_matrix(y.cpu().numpy(), preds.cpu().numpy())
-        
-        self.cm += self.confmat(logits, y).cpu().numpy()
-        
         # Log confusion matrix to TensorBoard
+        self.confmat_metric.update(logits, y)
+        self.auroc_metric(logits, y)
+        self.roc_metric.update(logits, y)
+        
         self.test_acc(logits, y)
         self.test_f1(logits, y)
         self.log_dict({'test_loss': loss, 
                        'test_acc': self.test_acc, 
-                       'test_f1': self.test_f1}, prog_bar=True, on_epoch=True)
+                       'test_f1': self.test_f1,
+                       'AUROC': self.auroc_metric}, prog_bar=True, on_epoch=True)
         return loss
     
     def on_test_end(self):
-        self.logger.experiment.add_figure('Confusion Matrix', self.plot_confusion_matrix())
-        
-    def plot_confusion_matrix(self):
-        cm = self.cm
-        class_names = [str(i) for i in range(len(cm))]
-        fig, ax = plt.subplots(figsize=(len(class_names), len(class_names)))
-        sns.heatmap(cm, annot=True, cmap="Blues", xticklabels=class_names, yticklabels=class_names)
-        plt.ylabel('Actual')
-        plt.xlabel('Predicted')
-        plt.title('Confusion Matrix')
-        plt.close(fig)
-        return fig
-    
+        self.logger.experiment.add_figure('Confusion Matrix', self.confmat_metric.plot()[0])
+        self.logger.experiment.add_figure('ROC', self.roc_metric.plot(score=True)[0])
+        self.confmat_metric.reset()
+        self.roc_metric.reset()
+
     def show_batch(self, win_size=(10, 10)):
 
       def _to_vis(data):
