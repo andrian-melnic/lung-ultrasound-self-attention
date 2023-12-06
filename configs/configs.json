@@ -25,7 +25,7 @@
         "hospitaldict_path": "../../dataset/hospitals-patients-dict.pkl",
         "rseed": 42,
         "ratios": [0.7, 0.1, 0.2],
-        "max_epochs": 100,
+        "max_epochs": 5,
         "batch_size": 16,
         "optimizer": "adamw",
         "lr": 0.0001,
