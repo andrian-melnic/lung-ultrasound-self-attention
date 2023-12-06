@@ -127,7 +127,7 @@ def objective(trial: optuna.trial.Trial) -> float:
     logger = TensorBoardLogger("tb_logs", name=model_name, version=version)
     trainer = pl.Trainer(
         enable_checkpointing=False,
-        max_epochs=10,
+        max_epochs=5,
         accelerator="gpu",
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_loss")],
         logger=logger
