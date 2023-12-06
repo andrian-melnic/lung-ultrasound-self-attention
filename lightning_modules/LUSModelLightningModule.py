@@ -10,7 +10,7 @@ from torchvision import models
 import torchvision.transforms.functional as TF
 
 # PyTorch Lightning
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 # Third-party libraries
 import timm
@@ -230,13 +230,6 @@ class LUSModelLightningModule(pl.LightningModule):
     def forward(self, x):
         return self.model(x)
 
-    def on_epoch_end(self):
-        # Logging train and validation losses to TensorBoard
-        self.logger.experiment.add_scalar('train_loss', torch.tensor(self.train_losses).mean(), self.current_epoch)
-        self.logger.experiment.add_scalar('val_loss', torch.tensor(self.val_losses).mean(), self.current_epoch)
-        
-        self.train_losses = []
-        self.val_losses = []
 
     def training_step(self, batch, batch_idx):
 
@@ -290,28 +283,21 @@ class LUSModelLightningModule(pl.LightningModule):
         self.confmat_metric.reset()
         self.roc_metric.reset()
 
-    def show_batch(self, win_size=(10, 10)):
 
-      def _to_vis(data):
-          # Ensure that pixel values are in the valid range [0, 1]
-          data = torch.clamp(data, 0, 1)
-          return tensor_to_image(torchvision.utils.make_grid(data, nrow=8))
+    def plot_losses(self):
+        sns.lineplot(x=range(len(self.train_losses)), y=self.train_losses, label='Train Loss')
+        sns.lineplot(x=range(len(self.val_losses)), y=self.val_losses, label='Validation Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training and Validation Loss')
+        plt.legend()
+        
+        # Log the figure to the logger
+        self.logger.experiment.add_figure('Losses', plt.gcf())
 
-      # Get a batch from the training set
-      imgs, labels = next(iter(self.train_dataloader()))
 
-      # Apply data augmentation to the batch
-      imgs_aug = self.transform(imgs)
-
-      # Use matplotlib to visualize the original and augmented images
-      plt.figure(figsize=win_size)
-      plt.imshow(_to_vis(imgs))
-      plt.title("Original Images")
-
-      plt.figure(figsize=win_size)
-      plt.imshow(_to_vis(imgs_aug))
-      plt.title("Augmented Images")
-      
+    def on_fit_end(self):
+        self.plot_losses()
       
     def freeze_layers_with_exclusion(self, excluded_layers):
         for param in self.model.parameters():

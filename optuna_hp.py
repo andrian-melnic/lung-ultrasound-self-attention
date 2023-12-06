@@ -3,7 +3,7 @@ import os
 import glob
 import pickle
 import torch
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
