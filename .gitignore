@@ -160,6 +160,4 @@ data/dataset_test.h5
 *.pkl
 *.pkl
 *.h5
-*.json
 .vscode/launch.json
-*.json
