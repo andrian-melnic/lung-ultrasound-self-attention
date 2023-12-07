@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Model-related imports
+from timm.scheduler.cosine_lr import CosineLRScheduler
 from torchvision.models import resnet18, resnet50
 from torchvision.models import ResNet18_Weights, ResNet50_Weights
 from transformers import ViTForImageClassification
@@ -54,6 +55,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.num_classes = hparams['num_classes']
     
         self.lr = hparams['lr']
+        self.batch_size = hparams['batch_size']
+        self.max_epochs = hparams['max_epochs']
         self.weight_decay = hparams['weight_decay']
         self.momentum = hparams['momentum']
         self.label_smoothing = hparams['label_smoothing']
@@ -203,8 +206,9 @@ class LUSModelLightningModule(pl.LightningModule):
         
         
         scheduler = {
-            # 'scheduler': torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-            #                                                         T_max=5,
+            # 'scheduler': torch.optim.lr_scheduler.CosineLRScheduler(optimizer,
+            #                                                         T_max=self.batch_size,
+            #                                                         eta_min=1e-5,
             #                                                         verbose=True),
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
                                                                     mode='min', 
@@ -215,11 +219,28 @@ class LUSModelLightningModule(pl.LightningModule):
             # 'interval': 'epoch',  # Adjust the LR on every step
             # 'frequency': 1,  # Frequency of the adjustment
             # 'warm_up_start_lr': self.lr,  # Initial LR during warm-up
-            'warm_up_epochs': 5,  # Number of warm-up epochs
+            # 'warm_up_epochs': 5,  # Number of warm-up epochs
             'verbose': True
         }
         
         return [optimizer], [scheduler]
+
+    def on_fit_start(self):
+        self.warmup_epochs = int(self.max_epochs * 0.1)
+        self.warmup_steps = int((self.trainer.estimated_stepping_batches/self.max_epochs)*self.warmup_epochs)
+        print(f"\nEstimated total train steps: {self.trainer.estimated_stepping_batches}")
+        print(f"\nWarmup epochs: {self.warmup_epochs}\nWarmup steps: {self.warmup_steps}")
+        
+    # Learning rate warm-up
+    def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_closure):
+        # update params
+        optimizer.step(closure=optimizer_closure)
+        # manually warm up lr without a scheduler
+        if self.trainer.global_step < self.warmup_steps:
+            lr_scale = min(1.0, float(self.trainer.global_step + 1) / self.warmup_steps)
+            for pg in self.trainer.optimizers[0].param_groups:
+                pg["lr"] = lr_scale * self.lr
+                # print(f'learning rate is {pg["lr"]}')
     
     def on_after_batch_transfer(self, batch, dataloader_idx):
         x, y = batch
@@ -241,6 +262,8 @@ class LUSModelLightningModule(pl.LightningModule):
         self.train_acc(logits, y)
         self.log_dict({'train_loss': loss, 
                        'train_acc': self.train_acc}, prog_bar=True, on_epoch=True)
+        
+        self.log('lr', self.trainer.optimizers[0].param_groups[0]["lr"], on_epoch=False, prog_bar=False)
         self.train_losses.append(loss.item())
         return loss
 
@@ -278,6 +301,7 @@ class LUSModelLightningModule(pl.LightningModule):
         return loss
     
     def on_test_end(self):
+        
         self.logger.experiment.add_figure('Confusion Matrix', self.confmat_metric.plot()[0])
         self.logger.experiment.add_figure('ROC', self.roc_metric.plot(score=True)[0])
         self.confmat_metric.reset()
@@ -285,8 +309,18 @@ class LUSModelLightningModule(pl.LightningModule):
 
 
     def plot_losses(self):
-        sns.lineplot(x=range(len(self.train_losses)), y=self.train_losses, label='Train Loss')
-        sns.lineplot(x=range(len(self.val_losses)), y=self.val_losses, label='Validation Loss')
+        num_batches_per_epoch_train = len(self.trainer.train_dataloader)
+        num_batches_per_epoch_val = len(self.trainer.val_dataloaders)
+
+        epoch_train_losses = [np.mean(self.train_losses[i:i + num_batches_per_epoch_train]) for i in range(0, len(self.train_losses), num_batches_per_epoch_train)]
+        epoch_val_losses = [np.mean(self.val_losses[i:i + num_batches_per_epoch_val]) for i in range(0, len(self.val_losses), num_batches_per_epoch_val)]
+
+        sns.lineplot(x=range(len(epoch_train_losses)), y=epoch_train_losses, label='Train Loss')
+        sns.lineplot(x=range(len(epoch_val_losses)), y=epoch_val_losses, label='Validation Loss')
+        
+        self.train_losses = []
+        self.val_losses = []
+
         plt.xlabel('Epoch')
         plt.ylabel('Loss')
         plt.title('Training and Validation Loss')

@@ -32,7 +32,7 @@ print("\n" + "-"*80 + "\n")
 # ---------------------------------------------------------------------------- #
 #                              Optuna logging config                           #
 # ---------------------------------------------------------------------------- #
-current_time = datetime.now().strftime("%d:%m_%H:%M")
+current_time = datetime.now().strftime("%d-%m_%H:%M")
 study_name = f"study_{current_time}"
 storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{study_name}")
 
