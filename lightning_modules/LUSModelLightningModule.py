@@ -257,7 +257,8 @@ class LUSModelLightningModule(pl.LightningModule):
         x, y = batch
         logits = self(x)
         
-        loss = self.weighted_cross_entropy(logits, y)
+        # loss = self.weighted_cross_entropy(logits, y)
+        loss = self.cross_entropy(logits, y)
         
         self.train_acc(logits, y)
         self.log_dict({'train_loss': loss, 

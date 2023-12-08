@@ -39,11 +39,12 @@ class DataAugmentation(nn.Module):
         self.image_mean = [0.12768, 0.13132, 0.13534]
         self.image_std = [0.1629, 0.16679, 0.17305]
         self.transforms = nn.Sequential(
-            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.5), translate=(0.2, 0.2), p=1),
+            K.RandomAffine(degrees=(-23, 23), scale=(1.1, 1.5), translate=(0.2, 0.2), p=0.5),
             K.RandomHorizontalFlip(p=0.5),
-            K.RandomBrightness(brightness=(0.85,0.95), p=0.5),
+            K.RandomBrightness(brightness=(0.85,0.95), p=0.3),
             K.RandomContrast(contrast=(0.9, 1.2), p=0.3),
-            K.RandomGamma(gamma=(0.8, 1.), gain=(1., 1.), p=0.5),
+            K.RandomGamma(gamma=(0.8, 1.), gain=(1., 1.), p=0.3),
+            K.RandomGaussianNoise(mean=0., std=1., p=1.)
             K.Normalize(mean=self.image_mean, std=self.image_std, p=1)
         )
         print(self.transforms)
