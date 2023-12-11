@@ -84,22 +84,25 @@ get_class_weights(sets["test_indices"], split_info)
 def objective(trial: optuna.trial.Trial) -> float:
     
     # We optimize the number of layers, hidden units in each layer and dropouts.
-    lr = trial.suggest_float("lr", 1e-5, 1e-2)
+    
+    batch_size = trial.suggest_categorical("batch_size", [16, 32, 64])
+    lr = trial.suggest_categorical("lr", [1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
     drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3, 0.4, 0.5])
-    label_smoothing = trial.suggest_categorical("label_smoothing", [0.0, 0.1])
-    weight_decay = trial.suggest_float("weight_decay", 0.0001, 0.1)
+    label_smoothing = trial.suggest_categorical("label_smoothing", [0, 0.1, 0.01])
+    weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
     # optimizer = trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"])
     
     hparams = {
         "num_classes": 4,
         "optimizer": args.optimizer,
         "lr": lr,
-        "batch_size": 16,
+        "batch_size": batch_size,
         "weight_decay": weight_decay,    
         "momentum": 0.9,
         "label_smoothing": label_smoothing,
         "drop_rate":drop_rate
     }
+    
     
 
     freeze_layers = None
@@ -123,19 +126,26 @@ def objective(trial: optuna.trial.Trial) -> float:
                                     freeze_layers=freeze_layers,
                                     show_model_summary=args.summary)
     
-    model_name, version = get_model_name(args)
-    logger = TensorBoardLogger("tb_logs", name=model_name, version=version)
+    # args.lr = hparams["lr"]
+    # args.batch_size = hparams["batch_size"]
+    # args.weight_decay = hparams["weight_decay"]
+    # args.label_smoothing = hparams["label_smoothing"]
+    # args.drop_rate = hparams["drop_rate"]
+    
+    # model_name, version = get_model_name(args)
+    logger = TensorBoardLogger(f"tb_logs/optuna/{args.model}_{args.optimizer}", name=study_name, version=f"trial_{trial.number}")
+    early_stop_callback = early_stopper()
     trainer = pl.Trainer(
         enable_checkpointing=False,
-        max_epochs=5,
+        max_epochs=50,
         accelerator="gpu",
-        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc")],
+        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_loss"), early_stop_callback],
         logger=logger
     )
     hyperparameters = dict(
                     optimizer=args.optimizer,
                     lr=lr,
-                    batch_size=args.batch_size,
+                    batch_size=batch_size,
                     weight_decay=weight_decay,    
                     momentum=args.momentum,
                     label_smoothing=label_smoothing,
@@ -144,16 +154,16 @@ def objective(trial: optuna.trial.Trial) -> float:
     trainer.logger.log_hyperparams(hyperparameters)
     trainer.fit(model, datamodule=lus_data_module)
     
-    return trainer.callback_metrics["val_acc"].item()
+    return trainer.callback_metrics["val_loss"].item()
 
 if __name__ == "__main__":
     pruner = optuna.pruners.MedianPruner()
     study = optuna.create_study(study_name=study_name, 
                                 storage=storage_name,
-                                direction="maximize",
+                                direction="minimize",
                                 pruner=pruner)
     
-    study.optimize(objective, n_trials=20)
+    study.optimize(objective, n_trials=10)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 
