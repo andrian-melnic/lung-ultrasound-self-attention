@@ -25,7 +25,7 @@ from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
 from DataAugmentation import DataAugmentation
-
+from sam import SAM
 # Metrics and evaluation
 from torchmetrics.classification import (MulticlassF1Score, 
                                          Accuracy,
@@ -132,9 +132,9 @@ class LUSModelLightningModule(pl.LightningModule):
             if self.pretrained:
                 if self.freeze_layers is not None:
                     self.freeze_layers_with_name()
-                else:    
-                    excluded_layers = ['head']
-                    self.freeze_layers_with_exclusion(excluded_layers)
+                # else:    
+                #     excluded_layers = ['head']
+                #     self.freeze_layers_with_exclusion(excluded_layers)
                     
                 if self.show_model_summary:
                     self.print_layers_req_grad()
@@ -193,10 +193,12 @@ class LUSModelLightningModule(pl.LightningModule):
                                               lr=self.lr,
                                               weight_decay=self.weight_decay)
         elif self.optimizer_name == "adamw":
+            # base_optimizer = torch.optim.AdamW
             optimizer = torch.optim.AdamW(self.parameters(),
                                               lr=self.lr,
                                               weight_decay=self.weight_decay)
         elif self.optimizer_name == "sgd":
+            # base_optimizer = torch.optim.SGD
             optimizer = torch.optim.SGD(self.parameters(),
                                              lr=self.lr,
                                              momentum=self.momentum,
@@ -204,25 +206,23 @@ class LUSModelLightningModule(pl.LightningModule):
         else:
             raise ValueError("Invalid optimizer name. Please choose either 'adam' or 'sgd'.")
         
-        
+        # optimizer = SAM(self.parameters(), base_optimizer, lr=self.lr, weight_decay=self.weight_decay)
         scheduler = {
             # 'scheduler': torch.optim.lr_scheduler.CosineLRScheduler(optimizer,
             #                                                         T_max=self.batch_size,
             #                                                         eta_min=1e-5,
             #                                                         verbose=True),
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
-                                                                    mode='min', 
+                                                                    mode='max', 
                                                                     patience=10, 
                                                                     factor=0.5,
                                                                     verbose=True),
-            'monitor': 'val_loss',  # Monitor validation loss
-            # 'interval': 'epoch',  # Adjust the LR on every step
-            # 'frequency': 1,  # Frequency of the adjustment
-            # 'warm_up_start_lr': self.lr,  # Initial LR during warm-up
-            # 'warm_up_epochs': 5,  # Number of warm-up epochs
+            'monitor': 'val_acc',  # Monitor validation loss
             'verbose': True
+            # 'interval': 'epoch',  # Adjust the LR on every step
         }
         
+        # return [optimizer]
         return [optimizer], [scheduler]
 
     def on_fit_start(self):
@@ -251,17 +251,34 @@ class LUSModelLightningModule(pl.LightningModule):
     def forward(self, x):
         return self.model(x)
 
+    def on_val_epoch_end(self):
+        # Logging train and validation losses to TensorBoard
+        self.logger.experiment.add_scalar('train_loss', torch.tensor(self.train_losses).mean(), self.current_epoch)
+        self.logger.experiment.add_scalar('val_loss', torch.tensor(self.val_losses).mean(), self.current_epoch)
+        
+        self.train_losses = []
+        self.val_losses = []
 
     def training_step(self, batch, batch_idx):
-
+        # optimizer = self.optimizers()
         x, y = batch
         logits = self(x)
         
         # loss = self.weighted_cross_entropy(logits, y)
         loss = self.cross_entropy(logits, y)
         
+        # loss_1 = self.cross_entropy(logits, y)
+        # self.manual_backward(loss_1, optimizer)
+        # optimizer.first_step(zero_grad=True)
+        
+        # second forward-backward pass
+        # loss_2 = self.cross_entropy(logits, y)
+        # self.manual_backward(loss_2, optimizer)
+        # optimizer.second_step(zero_grad=True)
+    
         self.train_acc(logits, y)
         self.log_dict({'train_loss': loss, 
+                    #    'train_loss_2': loss_2, 
                        'train_acc': self.train_acc}, prog_bar=True, on_epoch=True)
         
         self.log('lr', self.trainer.optimizers[0].param_groups[0]["lr"], on_epoch=False, prog_bar=False)
@@ -274,9 +291,12 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         
         loss = self.cross_entropy(logits, y)
+        # loss = self.weighted_cross_entropy(logits, y)
         
         self.val_acc(logits, y)
-        self.log_dict({'val_loss': loss, 
+        self.val_f1(logits, y)
+        self.log_dict({'val_loss': loss,
+                       'val_f1': self.val_f1,
                        'val_acc': self.val_acc}, prog_bar=True, on_epoch=True)
         self.val_losses.append(loss.item())
         return loss
