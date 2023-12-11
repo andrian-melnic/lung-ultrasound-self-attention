@@ -76,7 +76,8 @@ if __name__ == "__main__":
     "weight_decay": args.weight_decay,    
     "momentum": args.momentum,
     "label_smoothing": args.label_smoothing,
-    "drop_rate":args.drop_rate
+    "drop_rate":args.drop_rate,
+    "max_epochs":args.max_epochs,
     }
     freeze_layers = None
     if args.pretrained:

@@ -3,7 +3,7 @@ import os
 import glob
 import pickle
 import torch
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
@@ -32,7 +32,7 @@ print("\n" + "-"*80 + "\n")
 # ---------------------------------------------------------------------------- #
 #                              Optuna logging config                           #
 # ---------------------------------------------------------------------------- #
-current_time = datetime.now().strftime("%d:%m_%H:%M")
+current_time = datetime.now().strftime("%d-%m_%H:%M")
 study_name = f"study_{current_time}"
 storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{study_name}")
 
@@ -85,9 +85,9 @@ def objective(trial: optuna.trial.Trial) -> float:
     
     # We optimize the number of layers, hidden units in each layer and dropouts.
     lr = trial.suggest_float("lr", 1e-5, 1e-2)
-    drop_rate = trial.suggest_float("drop_rate", 0.1, 0.5)
+    drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3, 0.4, 0.5])
     label_smoothing = trial.suggest_categorical("label_smoothing", [0.0, 0.1])
-    weight_decay = trial.suggest_float("weight_decay", 0.0001, 0.001)
+    weight_decay = trial.suggest_float("weight_decay", 0.0001, 0.1)
     # optimizer = trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"])
     
     hparams = {
@@ -129,7 +129,7 @@ def objective(trial: optuna.trial.Trial) -> float:
         enable_checkpointing=False,
         max_epochs=5,
         accelerator="gpu",
-        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_loss")],
+        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc")],
         logger=logger
     )
     hyperparameters = dict(
@@ -144,16 +144,16 @@ def objective(trial: optuna.trial.Trial) -> float:
     trainer.logger.log_hyperparams(hyperparameters)
     trainer.fit(model, datamodule=lus_data_module)
     
-    return trainer.callback_metrics["val_loss"].item()
+    return trainer.callback_metrics["val_acc"].item()
 
 if __name__ == "__main__":
     pruner = optuna.pruners.MedianPruner()
     study = optuna.create_study(study_name=study_name, 
                                 storage=storage_name,
-                                direction="minimize",
+                                direction="maximize",
                                 pruner=pruner)
     
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=20)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 
