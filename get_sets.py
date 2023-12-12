@@ -29,8 +29,11 @@ def get_sets(args):
     train_ration = args.train_ratio
     
     
-    image_mean = (0.12768, 0.13132, 0.13534)
-    image_std = (0.1629, 0.16679, 0.17305)
+    # image_mean = (0.12768, 0.13132, 0.13534)
+    # image_std = (0.1629, 0.16679, 0.17305)
+    image_mean = [31.91702, 32.811, 33.74521]
+    image_std = [42.14112, 43.12252, 44.67562]
+    
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
     # test_transforms = A.Compose([
@@ -39,7 +42,7 @@ def get_sets(args):
     #     ToTensorV2(),
     # ])
     test_transforms = Preprocess()
-    train_transforms = TrainPreprocess()
+    train_transforms = Preprocess()
     # if args.augmentation:
     #     train_transforms = A.Compose([
     #         A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),

@@ -39,12 +39,11 @@ class DataAugmentation(nn.Module):
         self.image_mean = [0.12768, 0.13132, 0.13534]
         self.image_std = [0.1629, 0.16679, 0.17305]
         self.transforms = nn.Sequential(
-            K.RandomAffine(degrees=(-25, 25), scale=(1.1, 1.5), p=1),
+            K.RandomAffine(degrees=(-23, 23), p=0.5),
             K.RandomHorizontalFlip(p=0.5),
-            K.RandomBrightness(brightness=(0.7,1.3), p=0.5),
-            K.RandomContrast(contrast=(0.7, 1.3), p=0.5),
-            K.RandomGamma(gamma=(0.7, 1.3), gain=(1., 1.), p=0.5),
-            K.Normalize(mean=self.image_mean, std=self.image_std, p=1)
+            K.RandomBrightness(brightness=(1, 1.005), p=1.),
+            K.RandomContrast(contrast=(1.5, 2), p=1),
+            K.RandomGamma(gamma=(0.995, 1.05), gain=(1.5,1.5), p=1.),
         )
         print(self.transforms)
 
@@ -60,14 +59,15 @@ class Preprocess(nn.Module):
         super().__init__()
         # self.image_mean = torch.tensor([0.12768, 0.13132, 0.13534])
         # self.image_std = torch.tensor([0.1629, 0.16679, 0.17305])
-        self.image_mean = [0.12768, 0.13132, 0.13534]
-        self.image_std = [0.1629, 0.16679, 0.17305]
+        self.image_mean = [31.91702, 32.811, 33.74521]
+        self.image_std = [42.14112, 43.12252, 44.67562]
         
     @torch.no_grad()  # disable gradients for effiency
     def forward(self, x) -> Tensor:
         x_tmp: np.ndarray = np.array(x)  # HxWxC
         x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
         x_out = transforms.Resize((224, 224))(x_out)
+        x_out = K.Normalize(mean=self.image_mean, std=self.image_std, p=1, keepdim=True)(x_out.float())
         # x_out = K.Normalize(mean=self.image_mean, std=self.image_std, p=1, keepdim=True)(x_out.float() / 255.0)
         return x_out.float() / 255.0
     

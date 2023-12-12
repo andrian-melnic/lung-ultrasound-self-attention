@@ -3,7 +3,7 @@ import os
 import glob
 import pickle
 import torch
-import lightning.pytorch as pl
+import pytorch_lightning as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
@@ -163,7 +163,7 @@ if __name__ == "__main__":
                                 direction="minimize",
                                 pruner=pruner)
     
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=20)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 

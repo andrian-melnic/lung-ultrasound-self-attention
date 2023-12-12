@@ -129,9 +129,9 @@ class LUSModelLightningModule(pl.LightningModule):
             if self.pretrained:
                 if self.freeze_layers is not None:
                     self.freeze_layers_with_name()
-                else:    
-                    excluded_layers = ['head']
-                    self.freeze_layers_with_exclusion(excluded_layers)
+                # else:    
+                #     excluded_layers = ['head']
+                #     self.freeze_layers_with_exclusion(excluded_layers)
                     
                 if self.show_model_summary:
                     self.print_layers_req_grad()
@@ -201,24 +201,16 @@ class LUSModelLightningModule(pl.LightningModule):
         else:
             raise ValueError("Invalid optimizer name. Please choose either 'adam' or 'sgd'.")
         
-        
         scheduler = {
-            # 'scheduler': torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-            #                                                         T_max=5,
-            #                                                         verbose=True),
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
-                                                                    mode='min', 
+                                                                    mode='max', 
                                                                     patience=10, 
                                                                     factor=0.5,
                                                                     verbose=True),
-            'monitor': 'val_loss',  # Monitor validation loss
-            # 'interval': 'epoch',  # Adjust the LR on every step
-            # 'frequency': 1,  # Frequency of the adjustment
-            # 'warm_up_start_lr': self.lr,  # Initial LR during warm-up
-            'warm_up_epochs': 5,  # Number of warm-up epochs
+            'monitor': 'val_acc',  # Monitor validation loss
             'verbose': True
+            # 'interval': 'epoch',  # Adjust the LR on every step
         }
-        
         return [optimizer], [scheduler]
     
     def on_after_batch_transfer(self, batch, dataloader_idx):
@@ -230,7 +222,7 @@ class LUSModelLightningModule(pl.LightningModule):
     def forward(self, x):
         return self.model(x)
 
-    def on_epoch_end(self):
+    def on_val_epoch_end(self):
         # Logging train and validation losses to TensorBoard
         self.logger.experiment.add_scalar('train_loss', torch.tensor(self.train_losses).mean(), self.current_epoch)
         self.logger.experiment.add_scalar('val_loss', torch.tensor(self.val_losses).mean(), self.current_epoch)
@@ -239,12 +231,11 @@ class LUSModelLightningModule(pl.LightningModule):
         self.val_losses = []
 
     def training_step(self, batch, batch_idx):
-
         x, y = batch
         logits = self(x)
         
         loss = self.weighted_cross_entropy(logits, y)
-        
+        # loss = self.cross_entropy(logits, y)
         self.train_acc(logits, y)
         self.log_dict({'train_loss': loss, 
                        'train_acc': self.train_acc}, prog_bar=True, on_epoch=True)
@@ -257,9 +248,12 @@ class LUSModelLightningModule(pl.LightningModule):
         logits = self(x)
         
         loss = self.cross_entropy(logits, y)
+        # loss = self.weighted_cross_entropy(logits, y)
         
         self.val_acc(logits, y)
-        self.log_dict({'val_loss': loss, 
+        self.val_f1(logits, y)
+        self.log_dict({'val_loss': loss,
+                       'val_f1': self.val_f1,
                        'val_acc': self.val_acc}, prog_bar=True, on_epoch=True)
         self.val_losses.append(loss.item())
         return loss
@@ -290,28 +284,32 @@ class LUSModelLightningModule(pl.LightningModule):
         self.confmat_metric.reset()
         self.roc_metric.reset()
 
-    def show_batch(self, win_size=(10, 10)):
 
-      def _to_vis(data):
-          # Ensure that pixel values are in the valid range [0, 1]
-          data = torch.clamp(data, 0, 1)
-          return tensor_to_image(torchvision.utils.make_grid(data, nrow=8))
+    def plot_losses(self):
+        num_batches_per_epoch_train = len(self.trainer.train_dataloader)
+        num_batches_per_epoch_val = len(self.trainer.val_dataloaders)
 
-      # Get a batch from the training set
-      imgs, labels = next(iter(self.train_dataloader()))
+        self.val_losses = self.val_losses[:-1]
+        epoch_train_losses = [np.mean(self.train_losses[i:i + num_batches_per_epoch_train]) for i in range(0, len(self.train_losses), num_batches_per_epoch_train)]
+        epoch_val_losses = [np.mean(self.val_losses[i:i + num_batches_per_epoch_val]) for i in range(0, len(self.val_losses), num_batches_per_epoch_val)]
 
-      # Apply data augmentation to the batch
-      imgs_aug = self.transform(imgs)
+        sns.lineplot(x=range(len(epoch_train_losses)), y=epoch_train_losses, label='Train Loss')
+        sns.lineplot(x=range(len(epoch_val_losses)), y=epoch_val_losses, label='Validation Loss')
+        
+        self.train_losses = []
+        self.val_losses = []
 
-      # Use matplotlib to visualize the original and augmented images
-      plt.figure(figsize=win_size)
-      plt.imshow(_to_vis(imgs))
-      plt.title("Original Images")
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Training and Validation Loss')
+        plt.legend()
+        
+        # Log the figure to the logger
+        self.logger.experiment.add_figure('Losses', plt.gcf())
 
-      plt.figure(figsize=win_size)
-      plt.imshow(_to_vis(imgs_aug))
-      plt.title("Augmented Images")
-      
+
+    def on_fit_end(self):
+        self.plot_losses()
       
     def freeze_layers_with_exclusion(self, excluded_layers):
         for param in self.model.parameters():
