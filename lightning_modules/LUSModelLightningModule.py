@@ -213,11 +213,11 @@ class LUSModelLightningModule(pl.LightningModule):
             #                                                         eta_min=1e-5,
             #                                                         verbose=True),
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 
-                                                                    mode='max', 
+                                                                    mode='min', 
                                                                     patience=10, 
                                                                     factor=0.5,
                                                                     verbose=True),
-            'monitor': 'val_acc',  # Monitor validation loss
+            'monitor': 'val_loss',  # Monitor validation loss
             'verbose': True
             # 'interval': 'epoch',  # Adjust the LR on every step
         }
@@ -264,8 +264,8 @@ class LUSModelLightningModule(pl.LightningModule):
         x, y = batch
         logits = self(x)
         
-        # loss = self.weighted_cross_entropy(logits, y)
-        loss = self.cross_entropy(logits, y)
+        loss = self.weighted_cross_entropy(logits, y)
+        # loss = self.cross_entropy(logits, y)
         
         # loss_1 = self.cross_entropy(logits, y)
         # self.manual_backward(loss_1, optimizer)
@@ -335,6 +335,7 @@ class LUSModelLightningModule(pl.LightningModule):
 
         epoch_train_losses = [np.mean(self.train_losses[i:i + num_batches_per_epoch_train]) for i in range(0, len(self.train_losses), num_batches_per_epoch_train)]
         epoch_val_losses = [np.mean(self.val_losses[i:i + num_batches_per_epoch_val]) for i in range(0, len(self.val_losses), num_batches_per_epoch_val)]
+        epoch_val_losses = epoch_val_losses[:-1]
 
         sns.lineplot(x=range(len(epoch_train_losses)), y=epoch_train_losses, label='Train Loss')
         sns.lineplot(x=range(len(epoch_val_losses)), y=epoch_val_losses, label='Validation Loss')

@@ -29,62 +29,18 @@ def get_sets(args):
     train_ration = args.train_ratio
     
     
-    image_mean = (0.12768, 0.13132, 0.13534)
-    image_std = (0.1629, 0.16679, 0.17305)
+    image_mean = [31.91702, 32.811, 33.74521]
+    image_std = [42.14112, 43.12252, 44.67562]
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
-    # test_transforms = A.Compose([
-    #     A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
-    #     A.Normalize(mean=image_mean, std=image_std),
-    #     ToTensorV2(),
-    # ])
     test_transforms = Preprocess()
-    train_transforms = TrainPreprocess()
-    # if args.augmentation:
-    #     train_transforms = A.Compose([
-    #         A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
-            
-    #         # Spatial level transforms
-    #         A.ShiftScaleRotate(shift_limit=0.1, 
-    #                            rotate_limit=23, 
-    #                            scale_limit=(0.1, 0.5), 
-    #                            p=0.5, 
-    #                            interpolation=cv2.INTER_CUBIC, 
-    #                            border_mode=cv2.BORDER_CONSTANT),
-    #         A.ElasticTransform(alpha=0.5,
-    #                            sigma=25,
-    #                            alpha_affine=15,
-    #                            interpolation=cv2.INTER_CUBIC,
-    #                            p=0.5,
-    #                            border_mode=cv2.BORDER_CONSTANT),
-    #         A.HorizontalFlip(p=0.5),
-            
-    #         # Pixel level transforms
-    #         A.GaussianBlur(blur_limit=(3,3), p=0.5),
-    #         A.GaussNoise(p=0.5),
-    #         # A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
-    #         A.RandomGamma(gamma_limit=(90, 110), p=0.5),
-            
-            
-    #         A.Normalize(mean=image_mean, std=image_std),
-    #         ToTensorV2(),
-    #     ])
-    #     print(f"Using Augmentations: {args.augmentation}")
-        
-    # else:
-    #     # Use test_transforms if augmentation is not enabled
-    #     train_transforms = test_transforms
+    train_transforms = Preprocess()
     dataset = HDF5Dataset(dataset_h5_path)
 
     train_indices = []
     val_indices = []
     test_indices = []
 
-    # train_ratio = train_ratio
-    # test_ratio = round(1 - train_ratio, 1)
-    # val_ratio = 0.2
-
-    # ratios = [train_ratio, val_ratio, test_ratio]
     ratios = args.ratios
 
 

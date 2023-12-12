@@ -16,8 +16,8 @@ def early_stopper():
 def checkpoint_saver(checkpoint_dir):
     checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
                                           save_top_k=2,
-                                          mode="max",
-                                          monitor="val_acc",
+                                          mode="min",
+                                          monitor="val_loss",
                                           save_last=True,
                                           save_on_train_epoch_end=False,
                                           verbose=True,
