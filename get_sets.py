@@ -29,12 +29,12 @@ def get_sets(args):
     train_ration = args.train_ratio
     
     
-    image_mean = [31.91702, 32.811, 33.74521]
-    image_std = [42.14112, 43.12252, 44.67562]
+    image_mean = [0.12516, 0.12867, 0.13234]
+    image_std = [0.16526, 0.16911, 0.1752]
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
     test_transforms = Preprocess()
-    train_transforms = Preprocess()
+    train_transforms = TrainPreprocess()
     dataset = HDF5Dataset(dataset_h5_path)
 
     train_indices = []
@@ -113,9 +113,9 @@ def get_class_weights(indices, split_info):
 
     # Calculate class balance using 'compute_class_weight'
     class_weights = compute_class_weight('balanced', 
-                                        classes=np.unique(y_labels), 
+                                        classes=[0, 1, 2, 3], 
                                         y=y_labels)
-
+    class_weights[0] = 1.
     weights_tensor = torch.Tensor(class_weights)
     print(class_weights)
     return weights_tensor

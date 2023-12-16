@@ -1,4 +1,5 @@
 import warnings
+import signal
 import os
 import glob
 import pickle
@@ -17,7 +18,8 @@ from callbacks import *
 from run_model import *
 from get_sets import get_sets, get_class_weights
 
-if __name__ == "__main__":
+def main():
+    
     args = args_processing.parse_arguments()
 
     print("\n" + "-"*80 + "\n")
@@ -131,20 +133,25 @@ if __name__ == "__main__":
         print(f"- {type(callback).__name__}")
     print(f"Model checkpoints directory is {checkpoint_dir}\n\n")
 
-# ---------------------------- Model fit and test ---------------------------- #
-if args.mode == "train":
-    fit_model(model, trainer, lus_data_module, args.chkp)
-if args.mode == "test":
-    test_model(model, trainer, lus_data_module, args.chkp)
-if args.mode == "tune":
-    tuner = Tuner(trainer)
-    tuner.lr_find(model=model, 
-                  datamodule=lus_data_module, 
-                  method='fit',
-                  min_lr=1e-05,
-                  max_lr=0.1,
-                  mode="exponential",
-                  num_training=1000
-                  )
+        
+    # ---------------------------- Model fit and test ---------------------------- #
+    if args.mode == "train":
+        fit_model(model, trainer, lus_data_module, args.chkp)
+        
+    if args.mode == "test":
+        test_model(model, trainer, lus_data_module, args.chkp)
+        
+    if args.mode == "tune":
+        tuner = Tuner(trainer)
+        tuner.lr_find(model=model, 
+                    datamodule=lus_data_module, 
+                    method='fit',
+                    min_lr=1e-05,
+                    max_lr=0.1,
+                    mode="exponential",
+                    num_training=1000)
+
+if __name__ == "__main__":
+    main()
 
 
