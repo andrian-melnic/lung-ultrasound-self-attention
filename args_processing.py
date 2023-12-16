@@ -16,7 +16,9 @@ def parse_arguments():
                     "botnet18", 
                     "botnet50",
                     "vit",
-                    "swin_vit",
+                    "swin_base",
+                    "swin_tiny",
+                    "swin_small",
                     "simple_vit"]
 
     allowed_modes = ["train", "test", "train_test", "tune"]
