@@ -11,65 +11,48 @@ from torchvision import transforms
 import torchvision.transforms.functional as F
 from torch import Tensor
 
-# ---------------------------------------------------------------------------- #
-#                               DataAugmentation                               #
-# ---------------------------------------------------------------------------- #
-
 class DataAugmentation(nn.Module):
-    """Module to perform data augmentation using Kornia on torch tensors."""
 
     def __init__(self):
         super().__init__()
-        # self.transforms = torch.nn.Sequential(
-        #     K.RandomRotation(degrees=(-20, 20)),  # random rotation between -20 to 20 degrees
-        #     K.RandomAffine(degrees=(-10, 10), scale=(0.8, 1.2))  # random affine transformation with rotation between -10 to 10 degrees and scale between 0.8 to 1.2
-        # )
-        # self.transforms = torch.nn.Sequential(
-        #     K.RandomAffine(degrees=(-23, 23), scale=(1, 1.5), p=0.5),
-        #     K.RandomRotation(degrees=(-23, 23), p=0.5),
-        #     # K.RandomElasticTransform(alpha=(0.01,0.01), sigma=(0.01,0.01), p=0.5),
-        #     # K.RandomResizedCrop(size=(224,224), scale=(0.5, 1.0), p=0.3),
-        #     K.RandomContrast(contrast=(0.7, 1.8), p=0.5),
-        #     K.RandomGamma(gamma=(0.9, 1.8), gain=(0.9, 1.8), p=0.5),
-        #     K.RandomGaussianBlur((3, 3), (1, 1.5), p=0.3),
-        #     K.RandomHorizontalFlip(p=0.5),
-        #     # K.RandomVerticalFlip(p=0.3)
-        # )
-        
-        self.image_mean = [0.12768, 0.13132, 0.13534]
-        self.image_std = [0.1629, 0.16679, 0.17305]
+        self.image_mean = [0.1154, 0.11836, 0.12134]
+        self.image_std = [0.15844, 0.16195, 0.16743]
         self.transforms = nn.Sequential(
-            K.RandomAffine(degrees=(-23, 23), p=0.5),
-            K.RandomHorizontalFlip(p=0.5),
-            K.RandomBrightness(brightness=(1, 1.005), p=1.),
-            K.RandomContrast(contrast=(1.5, 2), p=1),
-            K.RandomGamma(gamma=(0.995, 1.05), gain=(1.5,1.5), p=1.),
+            transforms.RandomAffine(degrees=(-20, 20), scale=(1., 1.15), translate=(0.15, 0.15)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(brightness=0.3, contrast=0.3),
+            transforms.Normalize(self.image_mean, self.image_std)
         )
         print(self.transforms)
 
     @torch.no_grad()  # disable gradients for efficiency
     def forward(self, x):
-        x_out = self.transforms(x)
-        # x_out = self.us_classification_augmentation(x)
-        return x_out
+        transformed_images = []
 
+        for i in range(x.size(0)):  # iterate through the batch dimension
+            img = x[i]
+            img = self.transforms(img)
+            transformed_images.append(img)
+
+        x_out = torch.stack(transformed_images, dim=0)
+        return x_out
+    
 class Preprocess(nn.Module):
     """Module to perform pre-process using Kornia on torch tensors."""
     def __init__(self):
         super().__init__()
-        # self.image_mean = torch.tensor([0.12768, 0.13132, 0.13534])
-        # self.image_std = torch.tensor([0.1629, 0.16679, 0.17305])
-        self.image_mean = [31.91702, 32.811, 33.74521]
-        self.image_std = [42.14112, 43.12252, 44.67562]
+        self.image_mean = [0.1154, 0.11836, 0.12134]
+        self.image_std = [0.15844, 0.16195, 0.16743]
         
     @torch.no_grad()  # disable gradients for effiency
     def forward(self, x) -> Tensor:
         x_tmp: np.ndarray = np.array(x)  # HxWxC
         x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
         x_out = transforms.Resize((224, 224))(x_out)
-        x_out = K.Normalize(mean=self.image_mean, std=self.image_std, p=1, keepdim=True)(x_out.float())
-        # x_out = K.Normalize(mean=self.image_mean, std=self.image_std, p=1, keepdim=True)(x_out.float() / 255.0)
-        return x_out.float() / 255.0
+        x_out = transforms.ConvertImageDtype(dtype=torch.float32)(x_out)
+        x_out = transforms.Normalize(self.image_mean, self.image_std)(x_out)
+
+        return x_out
     
 class TrainPreprocess(nn.Module):
     """Module to perform pre-process using Kornia on torch tensors."""
@@ -79,4 +62,6 @@ class TrainPreprocess(nn.Module):
         x_tmp: np.ndarray = np.array(x)  # HxWxC
         x_out: Tensor = image_to_tensor(x_tmp, keepdim=True)  # CxHxW
         x_out = transforms.Resize((224, 224))(x_out)
-        return x_out.float() / 255.0
+        x_out = transforms.ConvertImageDtype(dtype=torch.float32)(x_out)
+        
+        return x_out

@@ -297,7 +297,7 @@ def split_dataset(rseed, dataset, pkl_file, ratios=[0.6, 0.2, 0.2]):
             FileNotFoundError: If the pickle file does not exist.
 
         """
-        combined_filename = os.path.dirname(pkl_file) + f"/_patinets_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
+        combined_filename = os.path.dirname(pkl_file) + f"/{rseed}_patinets_combined_sets_info_{round(ratios[0], 1)}_{round(ratios[1], 1)}_{round(ratios[2], 1)}.pkl"
 
 
         if os.path.exists(combined_filename):

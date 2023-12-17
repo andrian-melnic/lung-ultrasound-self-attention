@@ -29,65 +29,18 @@ def get_sets(args):
     train_ration = args.train_ratio
     
     
-    # image_mean = (0.12768, 0.13132, 0.13534)
-    # image_std = (0.1629, 0.16679, 0.17305)
-    image_mean = [31.91702, 32.811, 33.74521]
-    image_std = [42.14112, 43.12252, 44.67562]
-    
+    image_mean = [0.12516, 0.12867, 0.13234]
+    image_std = [0.16526, 0.16911, 0.1752]
     print(f"\nimage_mean: {image_mean}\nimage_std: {image_std}\n")
     
-    # test_transforms = A.Compose([
-    #     A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
-    #     A.Normalize(mean=image_mean, std=image_std),
-    #     ToTensorV2(),
-    # ])
     test_transforms = Preprocess()
-    train_transforms = Preprocess()
-    # if args.augmentation:
-    #     train_transforms = A.Compose([
-    #         A.Resize(width=224, height=224, always_apply=True, interpolation=cv2.INTER_CUBIC),
-            
-    #         # Spatial level transforms
-    #         A.ShiftScaleRotate(shift_limit=0.1, 
-    #                            rotate_limit=23, 
-    #                            scale_limit=(0.1, 0.5), 
-    #                            p=0.5, 
-    #                            interpolation=cv2.INTER_CUBIC, 
-    #                            border_mode=cv2.BORDER_CONSTANT),
-    #         A.ElasticTransform(alpha=0.5,
-    #                            sigma=25,
-    #                            alpha_affine=15,
-    #                            interpolation=cv2.INTER_CUBIC,
-    #                            p=0.5,
-    #                            border_mode=cv2.BORDER_CONSTANT),
-    #         A.HorizontalFlip(p=0.5),
-            
-    #         # Pixel level transforms
-    #         A.GaussianBlur(blur_limit=(3,3), p=0.5),
-    #         A.GaussNoise(p=0.5),
-    #         # A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, brightness_by_max=True, p=0.5),
-    #         A.RandomGamma(gamma_limit=(90, 110), p=0.5),
-            
-            
-    #         A.Normalize(mean=image_mean, std=image_std),
-    #         ToTensorV2(),
-    #     ])
-    #     print(f"Using Augmentations: {args.augmentation}")
-        
-    # else:
-    #     # Use test_transforms if augmentation is not enabled
-    #     train_transforms = test_transforms
+    train_transforms = TrainPreprocess()
     dataset = HDF5Dataset(dataset_h5_path)
 
     train_indices = []
     val_indices = []
     test_indices = []
 
-    # train_ratio = train_ratio
-    # test_ratio = round(1 - train_ratio, 1)
-    # val_ratio = 0.2
-
-    # ratios = [train_ratio, val_ratio, test_ratio]
     ratios = args.ratios
 
 
@@ -160,9 +113,9 @@ def get_class_weights(indices, split_info):
 
     # Calculate class balance using 'compute_class_weight'
     class_weights = compute_class_weight('balanced', 
-                                        classes=np.unique(y_labels), 
+                                        classes=[0, 1, 2, 3], 
                                         y=y_labels)
-
+    class_weights[0] = 1.
     weights_tensor = torch.Tensor(class_weights)
     print(class_weights)
     return weights_tensor

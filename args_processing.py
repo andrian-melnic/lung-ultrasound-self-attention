@@ -10,13 +10,16 @@ def parse_arguments():
     allowed_models = ["google_vit", 
                     "resnet18",
                     "resnet10",
+                    "resnet101",
                     "resnet50",
                     "beit", 
                     'timm_bot', 
                     "botnet18", 
                     "botnet50",
                     "vit",
-                    "swin_vit",
+                    "swin_base",
+                    "swin_tiny",
+                    "swin_small",
                     "simple_vit"]
 
     allowed_modes = ["train", "test", "train_test", "tune"]
