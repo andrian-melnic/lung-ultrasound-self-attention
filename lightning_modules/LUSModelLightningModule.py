@@ -92,7 +92,7 @@ class LUSModelLightningModule(pl.LightningModule):
         elif "resnet" in model_name :   
             # torch image models resnet18/50
             if "resnet10t" in model_name:
-                self.model = timm.create_model(f"resnet10t.c3_in1k",
+                self.model = timm.create_model(f"resnet10t.c3_in22k",
                                                 pretrained=self.pretrained,
                                                 num_classes=self.num_classes,
                                                 drop_rate=self.drop_rate)
