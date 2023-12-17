@@ -85,10 +85,9 @@ def objective(trial: optuna.trial.Trial) -> float:
     
     # We optimize the number of layers, hidden units in each layer and dropouts.
     
-    batch_size = trial.suggest_categorical("batch_size", [16, 32, 64])
-    lr = trial.suggest_categorical("lr", [1e-1, 1e-2, 1e-3, 1e-4, 1e-5])
-    drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3, 0.4, 0.5])
-    label_smoothing = trial.suggest_categorical("label_smoothing", [0, 0.1, 0.01])
+    batch_size = trial.suggest_categorical("batch_size", [32, 64])
+    lr = trial.suggest_categorical("lr", [1e-3, 1e-4, 5e-5, 1e-5])
+    drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3)
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
     # optimizer = trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"])
     
@@ -137,9 +136,9 @@ def objective(trial: optuna.trial.Trial) -> float:
     early_stop_callback = early_stopper()
     trainer = pl.Trainer(
         enable_checkpointing=False,
-        max_epochs=50,
+        max_epochs=20,
         accelerator="gpu",
-        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_loss"), early_stop_callback],
+        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_f1"), early_stop_callback],
         logger=logger
     )
     hyperparameters = dict(
@@ -154,13 +153,13 @@ def objective(trial: optuna.trial.Trial) -> float:
     trainer.logger.log_hyperparams(hyperparameters)
     trainer.fit(model, datamodule=lus_data_module)
     
-    return trainer.callback_metrics["val_loss"].item()
+    return trainer.callback_metrics["val_f1"].item()
 
-if __name__ == "__main__":
+def main():
     pruner = optuna.pruners.MedianPruner()
     study = optuna.create_study(study_name=study_name, 
                                 storage=storage_name,
-                                direction="minimize",
+                                direction="maximize",
                                 pruner=pruner)
     
     study.optimize(objective, n_trials=20)
@@ -183,3 +182,6 @@ if __name__ == "__main__":
     logging.info("  Params: ")
     for key, value in trial.params.items():
         logging.info("    {}: {}".format(key, value))
+        
+if __name__ == "__main__":
+    main()
