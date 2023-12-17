@@ -87,7 +87,7 @@ def objective(trial: optuna.trial.Trial) -> float:
     
     batch_size = trial.suggest_categorical("batch_size", [32, 64])
     lr = trial.suggest_categorical("lr", [1e-3, 1e-4, 5e-5, 1e-5])
-    drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3)
+    drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
     # optimizer = trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"])
     
@@ -98,7 +98,7 @@ def objective(trial: optuna.trial.Trial) -> float:
         "batch_size": batch_size,
         "weight_decay": weight_decay,    
         "momentum": 0.9,
-        "label_smoothing": label_smoothing,
+        "label_smoothing": args.label_smoothing,
         "drop_rate":drop_rate
     }
     
@@ -147,7 +147,7 @@ def objective(trial: optuna.trial.Trial) -> float:
                     batch_size=batch_size,
                     weight_decay=weight_decay,    
                     momentum=args.momentum,
-                    label_smoothing=label_smoothing,
+                    label_smoothing=args.label_smoothing,
                     drop_rate=drop_rate
                     )
     trainer.logger.log_hyperparams(hyperparameters)

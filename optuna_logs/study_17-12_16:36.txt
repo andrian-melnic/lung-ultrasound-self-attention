@@ -1,0 +1,7 @@
+INFO:root:
+Trial 0: ----------------------------------------
+INFO:root:  Params: {'batch_size': 64, 'lr': 1e-05, 'drop_rate': 0.1, 'weight_decay': 0.01}
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
