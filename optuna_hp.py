@@ -60,24 +60,6 @@ from data_setup import HDF5Dataset, FrameTargetDataset, split_dataset, reduce_se
 from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
 from lightning_modules.LUSDataModule import LUSDataModule
 
-# ---------------------------------- Dataset --------------------------------- #
-
-sets, split_info = get_sets(args)
-lus_data_module = LUSDataModule(sets["train"], 
-                                sets["test"],
-                                sets["val"],
-                                args.num_workers, 
-                                args.batch_size,
-                                args.mixup)
-
-print("- Train set class weights: ")
-train_weight_tensor = get_class_weights(sets["train_indices"], split_info)
-
-print("\n- Val set class weights: ")
-get_class_weights(sets["val_indices"], split_info)
-
-print("\n- Test set class weights: ")
-get_class_weights(sets["test_indices"], split_info)
 
 
 # ------------------- Model hyperparameters & instantiation ------------------ #
@@ -90,16 +72,34 @@ def objective(trial: optuna.trial.Trial) -> float:
     drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
     # optimizer = trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"])
+    # ---------------------------------- Dataset --------------------------------- #
+
+    sets, split_info = get_sets(args)
+    lus_data_module = LUSDataModule(sets["train"], 
+                                    sets["test"],
+                                    sets["val"],
+                                    args.num_workers,
+                                    batch_size,
+                                    args.mixup)
+
+    print("- Train set class weights: ")
+    train_weight_tensor = get_class_weights(sets["train_indices"], split_info)
+
+    print("\n- Val set class weights: ")
+    get_class_weights(sets["val_indices"], split_info)
+
+    print("\n- Test set class weights: ")
+    get_class_weights(sets["test_indices"], split_info)
     
     hparams = {
-        "num_classes": 4,
-        "optimizer": args.optimizer,
-        "lr": lr,
         "batch_size": batch_size,
+        "lr": lr,
+        "drop_rate":drop_rate,
         "weight_decay": weight_decay,    
         "momentum": 0.9,
+        "num_classes": 4,
+        "optimizer": args.optimizer,
         "label_smoothing": args.label_smoothing,
-        "drop_rate":drop_rate
     }
     
     
@@ -123,7 +123,8 @@ def objective(trial: optuna.trial.Trial) -> float:
                                     class_weights=train_weight_tensor,
                                     pretrained=args.pretrained,
                                     freeze_layers=freeze_layers,
-                                    show_model_summary=args.summary)
+                                    show_model_summary=args.summary,
+                                    augmentation=args.augmentation)
     
     # args.lr = hparams["lr"]
     # args.batch_size = hparams["batch_size"]
