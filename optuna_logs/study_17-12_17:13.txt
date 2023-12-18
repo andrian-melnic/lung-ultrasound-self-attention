@@ -7,3 +7,191 @@ INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: Tru
 INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
 INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
 INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 1: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.3, 'weight_decay': 0.01}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 2: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.0001, 'drop_rate': 0.3, 'weight_decay': 0.01}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 3: ----------------------------------------
+INFO:root:  Params: {'batch_size': 64, 'lr': 1e-05, 'drop_rate': 0.3, 'weight_decay': 0.01}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 4: ----------------------------------------
+INFO:root:  Params: {'batch_size': 64, 'lr': 5e-05, 'drop_rate': 0, 'weight_decay': 0.01}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 5: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 5e-05, 'drop_rate': 0, 'weight_decay': 0.001}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 6: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.0001, 'drop_rate': 0, 'weight_decay': 0.001}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 7: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 5e-05, 'drop_rate': 0.3, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 8: ----------------------------------------
+INFO:root:  Params: {'batch_size': 64, 'lr': 5e-05, 'drop_rate': 0.1, 'weight_decay': 0.01}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 9: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.1, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 10: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.1, 'weight_decay': 0.0001}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 11: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.2, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 12: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.1, 'weight_decay': 0.0001}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 13: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.2, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 14: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 1e-05, 'drop_rate': 0.2, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 15: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.2, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 16: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.1, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 17: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 0.001, 'drop_rate': 0.2, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:lightning.pytorch.utilities.rank_zero:`Trainer.fit` stopped: `max_epochs=20` reached.
+INFO:root:
+Trial 18: ----------------------------------------
+INFO:root:  Params: {'batch_size': 64, 'lr': 0.0001, 'drop_rate': 0.2, 'weight_decay': 0.1}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Trial 19: ----------------------------------------
+INFO:root:  Params: {'batch_size': 32, 'lr': 1e-05, 'drop_rate': 0.2, 'weight_decay': 0.001}
+INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/resnet50.a1_in1k)
+INFO:timm.models._hub:[timm/resnet50.a1_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
+INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
+INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
+INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
+INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
+INFO:root:
+Number of finished trials: 20
+INFO:root:
+Best trial:
+INFO:root:  Value: 0.6370494365692139
+INFO:root:  Params: 
+INFO:root:    batch_size: 32
+INFO:root:    lr: 0.001
+INFO:root:    drop_rate: 0.2
+INFO:root:    weight_decay: 0.1
