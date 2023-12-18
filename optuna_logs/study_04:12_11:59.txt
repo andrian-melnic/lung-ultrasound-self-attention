@@ -1,7 +1,0 @@
-INFO:root:
-Trial 0: ----------------------------------------
-INFO:root:  Params: {'lr': 0.006186246062360052, 'drop_rate': 0.35573977416369507, 'label_smoothing': 0.01693238009615634, 'weight_decay': 0.0005631148230238438, 'optimizer': 'sgd'}
-INFO:torch.distributed.nn.jit.instantiator:Created a temporary directory at /tmp/tmpmzazfw65
-INFO:torch.distributed.nn.jit.instantiator:Writing /tmp/tmpmzazfw65/_remote_module_non_scriptable.py
-INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_base_patch4_window7_224.ms_in1k)
-INFO:timm.models._hub:[timm/swin_base_patch4_window7_224.ms_in1k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
