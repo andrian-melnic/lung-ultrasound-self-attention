@@ -106,8 +106,8 @@ class LUSModelLightningModule(pl.LightningModule):
                 # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
-                if self.show_model_summary:
-                    self.print_layers_req_grad()
+            if self.show_model_summary:
+                self.print_layers_req_grad()
                     
 # -------------------------------- timm_botnet ------------------------------- #
 
