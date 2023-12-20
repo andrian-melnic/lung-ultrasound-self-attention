@@ -65,13 +65,12 @@ from lightning_modules.LUSDataModule import LUSDataModule
 # ------------------- Model hyperparameters & instantiation ------------------ #
 def objective(trial: optuna.trial.Trial) -> float:
     
-    # We optimize the number of layers, hidden units in each layer and dropouts.
     
     batch_size = trial.suggest_categorical("batch_size", [32, 64])
-    lr = trial.suggest_categorical("lr", [1e-4, 5e-5, 1e-5, 5e-6])
+    lr = trial.suggest_categorical("lr", [1e-3, 2e-4, 1e-4, 2e-5])
     drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
-    # optimizer = trial.suggest_categorical("optimizer", ["adam", "sgd", "adamw"])
+    
     # ---------------------------------- Dataset --------------------------------- #
 
     sets, split_info = get_sets(args)
@@ -142,13 +141,14 @@ def objective(trial: optuna.trial.Trial) -> float:
     
     trainer = pl.Trainer(
         enable_checkpointing=True,
-        max_epochs=20,
+        max_epochs=30,
         accelerator="gpu",
         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_f1"), 
                    early_stop_callback,
                    checkpoint_callback],
         logger=logger
     )
+    
     hyperparameters = dict(
                     optimizer=args.optimizer,
                     lr=lr,
