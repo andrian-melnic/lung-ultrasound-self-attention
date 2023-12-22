@@ -8,7 +8,7 @@ def early_stopper():
         monitor='val_f1',
         patience=15,
         strict=False,
-        verbose=False,
+        verbose=True,
         mode='max'
     )
     return early_stop_callback
@@ -21,15 +21,15 @@ def checkpoint_saver(checkpoint_dir):
                                           save_last=True,
                                           save_on_train_epoch_end=False,
                                           verbose=True,
-                                          filename="{epoch}-{val_acc:.4f}-{val_f1:.4f}-{val_loss:.4f}")
+                                          filename="{epoch}-{val_loss:.4f}-{val_f1:.4f}-{val_acc:.4f}")
     
     
-def checkpoint_saver_optuna(checkpoint_dir, trial_number):
+def checkpoint_saver_optuna(checkpoint_dir):
     checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
-                                          save_top_k=2,
+                                          save_top_k=3,
                                           mode="max",
                                           monitor="val_f1",
                                           save_on_train_epoch_end=False,
                                           verbose=True,
-                                          filename="{trial_number}-{epoch}-{val_loss:.4f}-{val_f1:.4f}-{val_acc:.4f}")
+                                          filename="{epoch}-{val_loss:.4f}-{val_f1:.4f}-{val_acc:.4f}")
     return checkpoint_callback

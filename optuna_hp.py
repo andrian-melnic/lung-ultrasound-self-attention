@@ -66,12 +66,13 @@ from lightning_modules.LUSDataModule import LUSDataModule
 def objective(trial: optuna.trial.Trial) -> float:
     
     
+    # batch_size = trial.suggest_categorical("batch_size", [32, 64])
     batch_size = trial.suggest_categorical("batch_size", [32, 64])
-    lr = trial.suggest_categorical("lr", [1e-3, 2e-4, 1e-4, 2e-5])
+    lr = trial.suggest_categorical("lr", [1e-4, 5e-5, 1e-5, 5e-6, 1e-6])
     drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
-    
-    # ---------------------------------- Dataset --------------------------------- #
+
+# ---------------------------------- Dataset --------------------------------- #
 
     sets, split_info = get_sets(args)
     lus_data_module = LUSDataModule(sets["train"], 
@@ -135,9 +136,8 @@ def objective(trial: optuna.trial.Trial) -> float:
     logger = TensorBoardLogger(f"tb_logs/optuna/{args.model}_{args.optimizer}", name=study_name, version=f"trial_{trial.number}")
     early_stop_callback = early_stopper()
     
-    checkpoint_dir = f"checkpoints/optuna/{args.model}_{args.optimizer}/{study_name}"
-    checkpoint_trial =  f"trial_{trial.number}"
-    checkpoint_callback = checkpoint_saver_optuna(checkpoint_dir, checkpoint_trial)
+    checkpoint_dir = f"checkpoints/optuna/{args.model}_{args.optimizer}/{study_name}/trial_{trial.number}"
+    checkpoint_callback = checkpoint_saver_optuna(checkpoint_dir)
     
     trainer = pl.Trainer(
         enable_checkpointing=True,
