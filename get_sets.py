@@ -103,20 +103,44 @@ def get_sets(args):
 
     return sets, split_info
 
+# def get_class_weights(indices, split_info):
+#     # Retrieves the dataset's labels
+#     ds_labels = split_info['labels']
+
+#     # Extract the train and test set labels
+#     y_labels = np.array(ds_labels)[indices]
+#     # y_test_labels = np.array(ds_labels)[test_indices]
+
+#     # Calculate class balance using 'compute_class_weight'
+#     class_weights = compute_class_weight('balanced', 
+#                                         classes=[0, 1, 2, 3], 
+#                                         y=y_labels)
+#     class_weights[0] = 1.
+#     weights_tensor = torch.Tensor(class_weights)
+#     print(class_weights)
+#     return weights_tensor
+
 def get_class_weights(indices, split_info):
     # Retrieves the dataset's labels
     ds_labels = split_info['labels']
 
     # Extract the train and test set labels
     y_labels = np.array(ds_labels)[indices]
-    # y_test_labels = np.array(ds_labels)[test_indices]
 
-    # Calculate class balance using 'compute_class_weight'
-    class_weights = compute_class_weight('balanced', 
-                                        classes=[0, 1, 2, 3], 
-                                        y=y_labels)
-    class_weights[0] = 1.
+    # Calculate the count of samples for each class
+    class_counts = np.bincount(y_labels)
+
+    # Find the majority class
+    majority_class = np.argmax(class_counts)
+
+    # Calculate custom class weights based on the relative difference from the majority class
+    class_weights = class_counts[majority_class] / class_counts
+
+    # Set a weight of 1 for the majority class
+    class_weights[majority_class] = 1.0
+
+    # Convert to PyTorch tensor
     weights_tensor = torch.Tensor(class_weights)
+
     print(class_weights)
     return weights_tensor
-
