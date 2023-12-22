@@ -10,7 +10,7 @@ from torchvision import models
 import torchvision.transforms.functional as TF
 
 # PyTorch Lightning
-import lightning.pytorch as pl
+import pytorch_lightning as pl
 
 # Third-party libraries
 import timm
@@ -19,14 +19,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Model-related imports
-from timm.scheduler.cosine_lr import CosineLRScheduler
 from torchvision.models import resnet18, resnet50
 from torchvision.models import ResNet18_Weights, ResNet50_Weights
 from transformers import ViTForImageClassification
 from lightning_modules.BotNet18LightningModule import BotNet
 from vit_pytorch import ViT, SimpleViT
 from DataAugmentation import DataAugmentation
-from sam import SAM
+
 # Metrics and evaluation
 from torchmetrics.classification import (MulticlassF1Score, 
                                          Accuracy,
@@ -56,8 +55,6 @@ class LUSModelLightningModule(pl.LightningModule):
         self.num_classes = hparams['num_classes']
     
         self.lr = hparams['lr']
-        self.batch_size = hparams['batch_size']
-        self.max_epochs = hparams['max_epochs']
         self.weight_decay = hparams['weight_decay']
         self.momentum = hparams['momentum']
         self.label_smoothing = hparams['label_smoothing']
@@ -338,6 +335,7 @@ class LUSModelLightningModule(pl.LightningModule):
         num_batches_per_epoch_train = len(self.trainer.train_dataloader)
         num_batches_per_epoch_val = len(self.trainer.val_dataloaders)
 
+        self.val_losses = self.val_losses[:-1]
         epoch_train_losses = [np.mean(self.train_losses[i:i + num_batches_per_epoch_train]) for i in range(0, len(self.train_losses), num_batches_per_epoch_train)]
         epoch_val_losses = [np.mean(self.val_losses[i:i + num_batches_per_epoch_val]) for i in range(0, len(self.val_losses), num_batches_per_epoch_val)]
         epoch_val_losses = epoch_val_losses[:-1]

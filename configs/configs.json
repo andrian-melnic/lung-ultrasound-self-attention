@@ -8,16 +8,17 @@
         "ratios": [0.6, 0.2, 0.2],
         "batch_size": 32,
         "optimizer": "sgd",
-        "lr": 0.0003,
-        "weight_decay": 0.1,
+        "lr": 0.00005,
+        "weight_decay": 0.01,
         "momentum": 0.9,
-        "drop_rate": 0.2,
+        "drop_rate": 0.3,
         "max_epochs": 100,
         "label_smoothing": 0,
         "num_workers": 10,
         "accumulate_grad_batches": 1,
         "precision": "32",
-        "disable_warnings": true
+        "disable_warnings": true,
+        "augmentation": true
     },
     {
         "config": "adamw",
@@ -37,6 +38,7 @@
         "num_workers": 8,
         "accumulate_grad_batches": 1,
         "precision": "32",
-        "disable_warnings": true
+        "disable_warnings": true,
+        "augmentation": true
     }
 ]

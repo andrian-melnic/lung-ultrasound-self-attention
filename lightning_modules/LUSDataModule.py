@@ -1,10 +1,10 @@
-import lightning.pytorch as pl
+import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader
 
 from timm.data.mixup import Mixup
 mixup_args = {
-    'mixup_alpha': 0.4,
+    'mixup_alpha': 0.7,
     'cutmix_alpha': 0,
     'prob': 1,
     'switch_prob': 0.,
