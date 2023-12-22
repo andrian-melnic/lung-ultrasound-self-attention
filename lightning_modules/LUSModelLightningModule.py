@@ -10,7 +10,7 @@ from torchvision import models
 import torchvision.transforms.functional as TF
 
 # PyTorch Lightning
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 # Third-party libraries
 import timm

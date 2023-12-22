@@ -14,7 +14,7 @@
         "drop_rate": 0.3,
         "max_epochs": 100,
         "label_smoothing": 0,
-        "num_workers": 10,
+        "num_workers": 8,
         "accumulate_grad_batches": 1,
         "precision": "32",
         "disable_warnings": true,

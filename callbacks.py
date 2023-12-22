@@ -1,6 +1,6 @@
-from pytorch_lightning.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
-from pytorch_lightning.callbacks import RichProgressBar
-from pytorch_lightning.callbacks.progress.rich_progress import RichProgressBarTheme
+from lightning.pytorch.callbacks import EarlyStopping, DeviceStatsMonitor, ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.callbacks import RichProgressBar
+from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTheme
 
 
 def early_stopper():
@@ -22,6 +22,7 @@ def checkpoint_saver(checkpoint_dir):
                                           save_on_train_epoch_end=False,
                                           verbose=True,
                                           filename="{epoch}-{val_loss:.4f}-{val_f1:.4f}-{val_acc:.4f}")
+    return checkpoint_callback
     
     
 def checkpoint_saver_optuna(checkpoint_dir):
