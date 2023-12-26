@@ -68,7 +68,7 @@ def objective(trial: optuna.trial.Trial) -> float:
     
     batch_size = 64
     # batch_size = trial.suggest_categorical("batch_size", [32, 64])
-    lr = trial.suggest_categorical("lr", [2e-4, 1e-4, 2e-5, 1e-5])
+    lr = trial.suggest_categorical("lr", [2e-5, 1e-5, 2e-6, 1e-6])
     drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
 
