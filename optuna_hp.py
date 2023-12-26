@@ -29,19 +29,6 @@ pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
 
 
-# ---------------------------------------------------------------------------- #
-#                              Optuna logging config                           #
-# ---------------------------------------------------------------------------- #
-current_time = datetime.now().strftime("%d-%m_%H:%M")
-study_name = f"study_{current_time}"
-storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{study_name}")
-
-log_file_path = f"optuna_logs/{study_name}.txt"
-logging.basicConfig(filename=log_file_path, level=logging.INFO)
-
-# Add stream handler of stdout to show the messages
-optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
     print("Warnings are DISABLED!\n\n")
@@ -53,6 +40,17 @@ working_dir = args.working_dir_path
 data_file = args.dataset_h5_path
 libraries_dir = working_dir + "/libraries"
 
+# ---------------------------------------------------------------------------- #
+#                              Optuna logging config                           #
+# ---------------------------------------------------------------------------- #
+current_time = datetime.now().strftime("%d-%m_%H:%M")
+study_name = f"study_{current_time}"
+storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{args.model_name}_{args.optimizer}/{study_name}")
+
+
+# Add stream handler of stdout to show the messages
+optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
+
 # ---------------------------- Import custom libs ---------------------------- #
 import sys
 sys.path.append(working_dir)
@@ -62,13 +60,15 @@ from lightning_modules.LUSDataModule import LUSDataModule
 
 
 
+
+
 # ------------------- Model hyperparameters & instantiation ------------------ #
 def objective(trial: optuna.trial.Trial) -> float:
     
     
     batch_size = 64
     # batch_size = trial.suggest_categorical("batch_size", [32, 64])
-    lr = trial.suggest_categorical("lr", [2e-5, 1e-5, 2e-6, 1e-6])
+    lr = trial.suggest_categorical("lr", [2e-3, 1e-3, 2e-4, 1e-4])
     drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
     weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
 

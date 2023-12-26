@@ -1,9 +1,0 @@
-INFO:root:
-Trial 0: ----------------------------------------
-INFO:root:  Params: {'batch_size': 64, 'lr': 0.0002, 'drop_rate': 0, 'weight_decay': 0.1}
-INFO:timm.models._builder:Loading pretrained weights from Hugging Face hub (timm/swin_tiny_patch4_window7_224.ms_in22k)
-INFO:timm.models._hub:[timm/swin_tiny_patch4_window7_224.ms_in22k] Safe alternative available for 'pytorch_model.bin' (as 'model.safetensors'). Loading weights using safetensors.
-INFO:lightning.pytorch.utilities.rank_zero:GPU available: True (cuda), used: True
-INFO:lightning.pytorch.utilities.rank_zero:TPU available: False, using: 0 TPU cores
-INFO:lightning.pytorch.utilities.rank_zero:IPU available: False, using: 0 IPUs
-INFO:lightning.pytorch.utilities.rank_zero:HPU available: False, using: 0 HPUs
