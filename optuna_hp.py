@@ -44,8 +44,8 @@ libraries_dir = working_dir + "/libraries"
 #                              Optuna logging config                           #
 # ---------------------------------------------------------------------------- #
 current_time = datetime.now().strftime("%d-%m_%H:%M")
-study_name = f"study_{current_time}"
-storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{args.model_name}_{args.optimizer}/{study_name}")
+study_name = f"{args.model}_{args.optimizer}_study_{current_time}"
+storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{study_name}")
 
 
 # Add stream handler of stdout to show the messages
