@@ -54,16 +54,20 @@ def denormalize_tensor(image_tensor):
     return denormalized_tensor
 
 
-def generate_and_display_CAM(image_tensor, cam_model, target_layers, cam_method="gradcamplusplus", target_class=None):
+def generate_and_display_CAM(args, image_tensor, cam_model, target_layers, cam_method="gradcamplusplus", target_class=None):
     
     if cam_method == "scorecam":
         cam = ScoreCAM(model=cam_model, target_layers=target_layers)
     elif cam_method == "ablationcam":
         cam = AblationCAM(model=cam_model, target_layers=target_layers)
     else:
-        cam = GradCAMPlusPlus(model=cam_model, 
-                              target_layers=target_layers, 
-                              reshape_transform=swin_reshape_transform)
+        if "resnet" in args.model:
+            cam = GradCAMPlusPlus(model=cam_model, 
+                                target_layers=target_layers)
+        elif "swin" in args.model:
+            cam = GradCAMPlusPlus(model=cam_model, 
+                                target_layers=target_layers, 
+                                reshape_transform=swin_reshape_transform)
     # Prepare the input tensor
     cam_input_tensor = image_tensor.unsqueeze(0)
     
@@ -74,7 +78,7 @@ def generate_and_display_CAM(image_tensor, cam_model, target_layers, cam_method=
     # targets = [0, 1, 2, 3]
     # Generate CAM
     grayscale_cams = cam(input_tensor=cam_input_tensor, 
-                        #  aug_smooth=True,
+                         aug_smooth=True,
                          eigen_smooth=True,
                          targets=targets)
     
@@ -83,7 +87,7 @@ def generate_and_display_CAM(image_tensor, cam_model, target_layers, cam_method=
     image = np.float32(transforms.ToPILImage()(image_tensor)) / 255
     
     # Show CAM on the image
-    cam_image = show_cam_on_image(image, grayscale_cams[0, :], use_rgb=True, image_weight=0.75)
+    cam_image = show_cam_on_image(image, grayscale_cams[0, :], use_rgb=True, image_weight=0.85)
     
     # Convert CAM to BGR format for display
     cam = np.uint8(255 * grayscale_cams[0, :])
@@ -141,7 +145,7 @@ def main():
 
     model = LUSModelLightningModule.load_from_checkpoint(args.chkp, 
                                                           strict=False,
-                                                          map_location=torch.device('mps'))
+                                                          map_location=torch.device('cuda'))
     model.eval()
     
     model_name, version = get_model_name(args)
@@ -161,8 +165,10 @@ def main():
     # cam_method = "ablationcam"
 
     # Specify the target layers for CAM
-    target_layers = [model.model.layers[-1].blocks[-1].norm2]
-    # target_layers = [model.model.layer4[-1]]
+    if "resnet" in args.model:
+        target_layers = [model.model.layer4[-1]]
+    elif "swin" in args.model:
+        target_layers = [model.model.layers[-1].blocks[-1].norm2]
     # target_layers = [model.model.layer[1]]
     # target_layers = [model.model.transformer.layers[5][0].dropout]
 
@@ -175,17 +181,24 @@ def main():
 
     for i, image_idx in enumerate(image_indices_to_plot):
         image_tensor = test_dataset[image_idx][0].to(device)
-        displayed_image = generate_and_display_CAM(image_tensor, model, target_layers, cam_method=cam_method, target_class=target_class)
+        displayed_image = generate_and_display_CAM(args, 
+                                                   image_tensor, 
+                                                   model, 
+                                                   target_layers, 
+                                                   cam_method=cam_method, 
+                                                   target_class=target_class)
         
         # Convert PIL Image to numpy array
         np_image = np.array(displayed_image)
         title = f"Idx: {image_idx}, Target: {test_dataset[image_idx][1]}, Predicted: {model(image_tensor.unsqueeze(0))[0].argmax()}"
+                    
         logger.experiment.add_image(
             title,  # Choose a unique tag for each image
             np_image,
             global_step=i,
             dataformats="HWC",  # Height, Width, Channels
         )
+        
         axes[i].imshow(displayed_image)
         axes[i].set_title(title)
         axes[i].axis('off')

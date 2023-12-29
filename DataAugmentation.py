@@ -18,7 +18,7 @@ class DataAugmentation(nn.Module):
         self.image_mean = [0.1154, 0.11836, 0.12134]
         self.image_std = [0.15844, 0.16195, 0.16743]
         self.transforms = nn.Sequential(
-            transforms.RandomAffine(degrees=(-20, 20), scale=(1., 1.15), translate=(0.15, 0.15)),
+            transforms.RandomAffine(degrees=(-15, 15), scale=(1., 1.15), translate=(0.15, 0.15)),
             transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(brightness=0.3, contrast=0.3),
             transforms.Normalize(self.image_mean, self.image_std)

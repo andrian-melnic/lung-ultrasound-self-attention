@@ -101,7 +101,7 @@ class LUSModelLightningModule(pl.LightningModule):
             print(f"\nUsing pretrained weights {self.pretrained}\n")
             if self.pretrained:
                 # List of layers to exclude from freezing
-                excluded_layers = ['fc', 'layer3', 'layer4']
+                excluded_layers = ['fc', 'layer2', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
             if self.show_model_summary:
                 self.print_layers_req_grad()
