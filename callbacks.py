@@ -22,7 +22,7 @@ def checkpoint_saver(checkpoint_dir):
                                           save_on_train_epoch_end=False,
                                           verbose=True,
                                           filename="{epoch}-{val_loss:.4f}-{val_f1:.4f}-{val_acc:.4f}")
-    
+    return checkpoint_callback
     
 def checkpoint_saver_optuna(checkpoint_dir):
     checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
