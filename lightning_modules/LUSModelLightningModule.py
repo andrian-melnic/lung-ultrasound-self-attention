@@ -137,13 +137,14 @@ class LUSModelLightningModule(pl.LightningModule):
             
             if self.pretrained:
                 if self.freeze_layers is not None:
-                    self.freeze_layers_with_name()
-                # else:    
-                #     excluded_layers = ['head']
-                #     self.freeze_layers_with_exclusion(excluded_layers)
+                    if 'all' in self.freeze_layers:
+                        excluded_layers = ['head']
+                        self.freeze_layers_with_exclusion(excluded_layers)
+                    else:
+                        self.freeze_layers_with_name()
                     
-                if self.show_model_summary:
-                    self.print_layers_req_grad()
+            if self.show_model_summary:
+                self.print_layers_req_grad()
                 
 # ------------------------------ Data processing ----------------------------- #
 
@@ -360,6 +361,7 @@ class LUSModelLightningModule(pl.LightningModule):
         
         
     def freeze_layers_with_exclusion(self, excluded_layers):
+        print(f"Freezing all layers except for: {excluded_layers}")
         for param in self.model.parameters():
             param.requires_grad = False
 
@@ -373,6 +375,7 @@ class LUSModelLightningModule(pl.LightningModule):
         print(f"Freezing all layers with {self.freeze_layers} in name")
         for name, param in self.model.named_parameters():
             if self.freeze_layers in name:
+            # if name in self.freeze_layers:
                 param.requires_grad = False
                 
                 
