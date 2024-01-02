@@ -125,23 +125,29 @@ class LUSModelLightningModule(pl.LightningModule):
 
 # -------------------------------- swin_vit ---------------------------------- #
 
-
         elif "swin" in model_name:
-            
-            print(f"\nUsing pretrained weights: {pretrained}\n")
-            # self.model = timm.create_model('swin_tiny_patch4_window7_224.ms_in22k', 
-            self.model = timm.create_model(f'{model_name}_patch4_window7_224.ms_in22k', 
-                                           pretrained=pretrained, 
-                                           num_classes=self.num_classes,
-                                           drop_rate=self.drop_rate)
-            
-            if self.pretrained:
-                if self.freeze_layers is not None:
-                    if 'all' in self.freeze_layers:
-                        excluded_layers = ['head']
-                        self.freeze_layers_with_exclusion(excluded_layers)
-                    else:
-                        self.freeze_layers_with_name()
+            if "micro" in model_name:
+                model = timm.create_model(f'swin_tiny_patch4_window7_224', 
+                        embed_dim = 48,
+                        depths = (4, 4, 6, 4),
+                        num_heads=(3, 6, 12, 24),
+                        num_classes=4,
+                        drop_rate=args.drop_rate)
+            else
+                print(f"\nUsing pretrained weights: {pretrained}\n")
+                # self.model = timm.create_model('swin_tiny_patch4_window7_224.ms_in22k', 
+                self.model = timm.create_model(f'{model_name}_patch4_window7_224.ms_in1k', 
+                                            pretrained=pretrained, 
+                                            num_classes=self.num_classes,
+                                            drop_rate=self.drop_rate)
+                
+                if self.pretrained:
+                    if self.freeze_layers is not None:
+                        if 'all' in self.freeze_layers:
+                            excluded_layers = ['head']
+                            self.freeze_layers_with_exclusion(excluded_layers)
+                        else:
+                            self.freeze_layers_with_name()
                     
             if self.show_model_summary:
                 self.print_layers_req_grad()
