@@ -17,6 +17,7 @@ def parse_arguments():
                     "botnet18", 
                     "botnet50",
                     "vit",
+                    "swin_micro",
                     "swin_base",
                     "swin_tiny",
                     "swin_small",
