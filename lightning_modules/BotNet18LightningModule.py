@@ -110,7 +110,7 @@ class Bottleneck(nn.Module):
 
 
 class BotNet(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=4, resolution=(224, 224), heads=4):
+    def __init__(self, block, num_blocks, drop_rate, num_classes=4, resolution=(224, 224), heads=4):
         super(BotNet, self).__init__()
         
         if block == "basic":
@@ -120,6 +120,7 @@ class BotNet(nn.Module):
             
         self.in_planes = 64
         self.resolution = list(resolution)
+        self.drop_rate = drop_rate
 # ---------------------------------- Layers ---------------------------------- #
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -149,7 +150,7 @@ class BotNet(nn.Module):
         
         # FC
         self.fc = nn.Sequential(
-            nn.Dropout(0.1), # All architecture deeper than ResNet-200 dropout_rate: 0.2
+            nn.Dropout(self.drop_rate), # All architecture deeper than ResNet-200 dropout_rate: 0.2
             nn.Linear(512 * self.block.expansion, num_classes)
         )
 

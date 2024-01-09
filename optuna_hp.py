@@ -28,7 +28,6 @@ print("\n" + "-"*80 + "\n")
 pl.seed_everything(args.rseed)
 print("\n" + "-"*80 + "\n")
 
-
 # ------------------------------ Warnings config ----------------------------- #
 if args.disable_warnings: 
     print("Warnings are DISABLED!\n\n")
@@ -40,17 +39,6 @@ working_dir = args.working_dir_path
 data_file = args.dataset_h5_path
 libraries_dir = working_dir + "/libraries"
 
-# ---------------------------------------------------------------------------- #
-#                              Optuna logging config                           #
-# ---------------------------------------------------------------------------- #
-current_time = datetime.now().strftime("%d-%m_%H:%M")
-study_name = f"{args.model}_{args.optimizer}_study_{current_time}"
-storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{study_name}")
-
-
-# Add stream handler of stdout to show the messages
-optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-
 # ---------------------------- Import custom libs ---------------------------- #
 import sys
 sys.path.append(working_dir)
@@ -59,19 +47,15 @@ from lightning_modules.LUSModelLightningModule import LUSModelLightningModule
 from lightning_modules.LUSDataModule import LUSDataModule
 
 
-
-
-
 # ------------------- Model hyperparameters & instantiation ------------------ #
-def objective(trial: optuna.trial.Trial) -> float:
+def objective(study_path, trial: optuna.trial.Trial) -> float:
     
-    
-    batch_size = 64
+    batch_size = args.batch_size
     # batch_size = trial.suggest_categorical("batch_size", [32, 64])
-    # lr = trial.suggest_categorical("lr", [2e-3, 1e-3, 2e-4, 1e-4])
-    lr = trial.suggest_loguniform("lr", 1e-6, 1e-2)
-    drop_rate = trial.suggest_categorical("drop_rate", [0, 0.1, 0.2, 0.3])
-    weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3, 1e-4])
+    lr = trial.suggest_categorical("lr", [5e-3, 2e-3, 1e-3, 5e-4])
+    # lr = trial.suggest_loguniform("lr", 1e-4, 1e-2)
+    drop_rate = trial.suggest_categorical("drop_rate", [0.1, 0.2, 0.3])
+    weight_decay = trial.suggest_categorical("weight_decay", [1e-1, 1e-2, 1e-3])
 
 # ---------------------------------- Dataset --------------------------------- #
 
@@ -134,44 +118,67 @@ def objective(trial: optuna.trial.Trial) -> float:
     # args.drop_rate = hparams["drop_rate"]
     
     # model_name, version = get_model_name(args)
-    logger = TensorBoardLogger(f"tb_logs/optuna/{args.model}_{args.optimizer}", name=study_name, version=f"trial_{trial.number}")
+
+    logger = TensorBoardLogger(f"tb_logs/optuna",
+                               name=study_path,
+                               version=f"trial_{trial.number}")
     early_stop_callback = early_stopper()
     
-    checkpoint_dir = f"checkpoints/optuna/{args.model}_{args.optimizer}/{study_name}/trial_{trial.number}"
+    checkpoint_dir = f"checkpoints/optuna/{study_path}/trial_{trial.number}"
     checkpoint_callback = checkpoint_saver_optuna(checkpoint_dir)
     
-    trainer = pl.Trainer(
-        enable_checkpointing=True,
-        max_epochs=30,
-        accelerator="gpu",
-        callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_f1"), 
-                   early_stop_callback,
-                   checkpoint_callback],
-        logger=logger
-    )
+    trainer = pl.Trainer(enable_checkpointing=True,
+                         max_epochs=30,
+                         accelerator="gpu",
+                         callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_f1"), 
+                                    early_stop_callback,
+                                    checkpoint_callback],
+                         logger=logger)
     
-    hyperparameters = dict(
-                    optimizer=args.optimizer,
-                    lr=lr,
-                    batch_size=batch_size,
-                    weight_decay=weight_decay,    
-                    momentum=args.momentum,
-                    label_smoothing=args.label_smoothing,
-                    drop_rate=drop_rate
-                    )
+    hyperparameters = dict(optimizer=args.optimizer,
+                           lr=lr,
+                           batch_size=batch_size,
+                           weight_decay=weight_decay,
+                           momentum=args.momentum,
+                           label_smoothing=args.label_smoothing,
+                           drop_rate=drop_rate)
+    
     trainer.logger.log_hyperparams(hyperparameters)
     trainer.fit(model, datamodule=lus_data_module)
     
     return trainer.callback_metrics["val_f1"].item()
 
 def main():
+    
+# ---------------------------------------------------------------------------- #
+#                              Optuna logging config                           #
+# ---------------------------------------------------------------------------- #
+
+    current_time = datetime.now().strftime("%d-%m_%H:%M")
+    study_dir_pretrained = "pretrained" if args.pretrained==True else "vanilla"
+    
+    if "swin" in args.model:
+        study_dir_model = "swin"
+    elif "botnet" in args.model:
+        study_dir_model = "botnet"
+    elif "resnet" in args.model:
+        study_dir_model = "resnet"
+    elif "vit" in args.model and "swin" not in args.model:
+        study_dir_model = "vit"
+        
+    study_name = f"{args.model}_{args.optimizer}_study_{current_time}"
+    study_path = f"{study_dir_pretrained}/{study_dir_model}/{study_name}"
+    storage_name = "sqlite:///{}.db".format(f"optuna_dbs/{study_path}")
+        
+    optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
     pruner = optuna.pruners.MedianPruner()
     study = optuna.create_study(study_name=study_name, 
                                 storage=storage_name,
                                 direction="maximize",
                                 pruner=pruner)
+        
     
-    study.optimize(objective, n_trials=20)
+    study.optimize(lambda trial: objective(study_path, trial), n_trials=20)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 
