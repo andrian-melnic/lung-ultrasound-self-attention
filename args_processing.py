@@ -7,21 +7,17 @@ def parse_arguments():
     # Parse command-line arguments
     parser = ArgumentParser()
 
-    allowed_models = ["google_vit", 
-                    "resnet18",
-                    "resnet10",
-                    "resnet101",
-                    "resnet50",
-                    "beit", 
-                    'timm_bot', 
-                    "botnet18", 
-                    "botnet50",
-                    "vit",
-                    "swin_micro",
-                    "swin_base",
-                    "swin_tiny",
-                    "swin_small",
-                    "simple_vit"]
+    allowed_models = ["resnet18",
+                      "resnet50",
+                      "botnet26t",
+                      "botnet50ts",
+                      "botnet18",
+                      "botnet50",
+                      "efficientvit",
+                      "swin_tiny",
+                      "swin_micro",
+                      "vit_tiny",
+                      "vit_base"]
 
     allowed_modes = ["train", "test", "train_test", "tune"]
     parser.add_argument("--model", type=str, choices=allowed_models)
@@ -66,6 +62,7 @@ def parse_arguments():
     parser.add_argument('--config', type=str, help='Path to JSON configuration file')
 
     args = parser.parse_args()
+    
 
     # -------------------------------- json config ------------------------------- #
 

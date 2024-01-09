@@ -63,77 +63,90 @@ class LUSModelLightningModule(pl.LightningModule):
         self.freeze_layers = freeze_layers
         self.show_model_summary = show_model_summary
         self.augmentation = augmentation
-        
 # ----------------------------------- Model ---------------------------------- #
 
-# --------------------------------- BotNet18 --------------------------------- #
+# ---------------------------------- resnet ---------------------------------- #
 
-
-        if model_name == "botnet50":
-            self.model = BotNet("bottleneck",
-                                 [3, 4, 6, 3], 
-                                  num_classes=self.num_classes, 
-                                  resolution=(224, 224), 
-                                  heads=4)
+        if "resnet" in model_name :   
+            # torch image models resnet18/50 
+            self.model = timm.create_model(f"{model_name}.a1_in1k",
+                                            pretrained=self.pretrained,
+                                            num_classes=self.num_classes,
+                                            drop_rate=self.drop_rate)
             
-        elif model_name == "botnet18":
-            self.model = BotNet("basic",
-                                  [2, 2, 2, 2], 
-                                  num_classes=self.num_classes, 
-                                  resolution=(224, 224), 
-                                  heads=4)
-
-# --------------------------------- resnet --------------------------------- #
-
-
-        elif "resnet" in model_name :   
-            # torch image models resnet18/50
-            if "resnet10t" in model_name:
-                self.model = timm.create_model(f"resnet10t.c3_in22k",
-                                                pretrained=self.pretrained,
-                                                num_classes=self.num_classes,
-                                                drop_rate=self.drop_rate)
-            else:
-                self.model = timm.create_model(f"{model_name}.a1_in1k",
-                                                pretrained=self.pretrained,
-                                                num_classes=self.num_classes,
-                                                drop_rate=self.drop_rate)
             print(f"\nUsing pretrained weights {self.pretrained}\n")
+            
             if self.pretrained:
-                # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer2', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
+                
             if self.show_model_summary:
                 self.print_layers_req_grad()
                     
-# -------------------------------- timm_botnet ------------------------------- #
+# ---------------------------------- botnet ---------------------------------- #
 
-
-        elif model_name == "timm_bot":
+        elif "botnet" in model_name:
+            if model_name == "botnet50":
+                self.model = BotNet("bottleneck",
+                                    [3, 4, 6, 3], 
+                                    num_classes=self.num_classes, 
+                                    resolution=(224, 224), 
+                                    heads=4,
+                                    drop_rate=self.drop_rate)
+                
+            elif model_name == "botnet18":
+                self.model = BotNet("basic",
+                                    [2, 2, 2, 2], 
+                                    num_classes=self.num_classes, 
+                                    resolution=(224, 224), 
+                                    heads=4,
+                                    drop_rate=self.drop_rate)
+            else:
+                self.model = timm.create_model(f'{model_name}_256',
+                                               num_classes=self.num_classes,
+                                               img_size=224,
+                                               fixed_input_size=True,
+                                               drop_rate=self.drop_rate)
+                
             print(f"\nUsing pretrained weights {self.pretrained}\n")
-
-            self.model = timm.create_model('botnet26t_256.c1_in1k',
-                                           pretrained=self.pretrained,
-                                           num_classes=self.num_classes,
-                                           )
+            
             if self.pretrained:
-                # List of layers to exclude from freezing
                 excluded_layers = ['fc', 'layer3', 'layer4']
                 self.freeze_layers_with_exclusion(excluded_layers)
                 if self.show_model_summary:
                     self.print_layers_req_grad()
 
+# -------------------------------- vit --------------------------------------- #
+
+        elif "vit" in model_name and "swin" not in model_name:
+            print(f"\nUsing pretrained weights: {pretrained}\n")
+            self.model = timm.create_model(f'{model_name}_patch16_224', 
+                                            pretrained=pretrained, 
+                                            num_classes=self.num_classes,
+                                            drop_rate=self.drop_rate)
+            
+            if self.pretrained:
+                if self.freeze_layers is not None:
+                    if 'all' in self.freeze_layers:
+                        excluded_layers = ['head']
+                        self.freeze_layers_with_exclusion(excluded_layers)
+                    else:
+                        self.freeze_layers_with_name()
+                
+        if self.show_model_summary:
+            self.print_layers_req_grad()
+                
 # -------------------------------- swin_vit ---------------------------------- #
 
         elif "swin" in model_name:
             if "micro" in model_name:
-                model = timm.create_model(f'swin_tiny_patch4_window7_224', 
+                self.model = timm.create_model(f'swin_tiny_patch4_window7_224', 
                         embed_dim = 48,
-                        depths = (4, 4, 6, 4),
+                        depths = (2, 2, 6, 2),
                         num_heads=(3, 6, 12, 24),
-                        num_classes=4,
-                        drop_rate=args.drop_rate)
-            else
+                        num_classes=self.num_classes,
+                        drop_rate=self.drop_rate)
+            else:
                 print(f"\nUsing pretrained weights: {pretrained}\n")
                 # self.model = timm.create_model('swin_tiny_patch4_window7_224.ms_in22k', 
                 self.model = timm.create_model(f'{model_name}_patch4_window7_224.ms_in1k', 
@@ -152,15 +165,30 @@ class LUSModelLightningModule(pl.LightningModule):
             if self.show_model_summary:
                 self.print_layers_req_grad()
                 
+# ------------------------------- efficientvit ------------------------------- #
+
+        elif "efficientvit" in model_name:
+            self.model = timm.create_model(f"{model_name}_m5.r224_in1k",
+                                           pretrained=pretrained,
+                                           num_classes=self.num_classes,
+                                           drop_rate=self.drop_rate)
+            
+            if self.pretrained:
+                    if self.freeze_layers is not None:
+                        if 'all' in self.freeze_layers:
+                            excluded_layers = ['head']
+                            self.freeze_layers_with_exclusion(excluded_layers)
+                        else:
+                            self.freeze_layers_with_name()
+                    
+            if self.show_model_summary:
+                self.print_layers_req_grad()
+                                           
 # ------------------------------ Data processing ----------------------------- #
-
-
         print(f"Using augmentation: {self.augmentation}")
         self.transform = DataAugmentation()
         
 # ------------------------------------ HP ------------------------------------ #
-
-
         if show_model_summary:
             print(f"\nModel summary:\n{self.model}")
         
