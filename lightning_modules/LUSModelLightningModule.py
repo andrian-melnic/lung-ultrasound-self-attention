@@ -10,7 +10,7 @@ from torchvision import models
 import torchvision.transforms.functional as TF
 
 # PyTorch Lightning
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
 # Third-party libraries
 import timm
@@ -245,6 +245,7 @@ class LUSModelLightningModule(pl.LightningModule):
         scheduler = {
             'scheduler': torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,
                                                                     T_0=5,
+                                                                    T_mult=2,
                                                                     eta_min=0,
                                                                     verbose=True),
             # 'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 

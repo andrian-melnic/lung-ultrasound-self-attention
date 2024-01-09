@@ -3,12 +3,12 @@ import os
 import glob
 import pickle
 import torch
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
-from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning import Trainer
+from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch import Trainer
 
 import args_processing
 from utils import *
