@@ -161,3 +161,4 @@ data/dataset_test.h5
 *.pkl
 *.h5
 .vscode/launch.json
+optuna_dbs/
