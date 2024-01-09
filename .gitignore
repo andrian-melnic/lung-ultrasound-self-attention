@@ -7,7 +7,7 @@ lightning_logs
 frame_info.pkl
 # C extensions
 *.so
-optuna_dbs/
+
 # Distribution / packaging
 .Python
 tb_logs/
