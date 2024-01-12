@@ -6,7 +6,7 @@ from lightning.pytorch.callbacks.progress.rich_progress import RichProgressBarTh
 def early_stopper():
     early_stop_callback = EarlyStopping(
         monitor='val_f1',
-        patience=30,
+        patience=50,
         strict=False,
         verbose=True,
         mode='max'

@@ -61,7 +61,7 @@ def generate_and_display_CAM(args, image_tensor, cam_model, target_layers, cam_m
     elif cam_method == "ablationcam":
         cam = AblationCAM(model=cam_model, target_layers=target_layers)
     else:
-        if "resnet" in args.model:
+        if "resnet" in args.model or "botnet" in args.model:
             cam = GradCAMPlusPlus(model=cam_model, 
                                 target_layers=target_layers)
         elif "swin" in args.model:
@@ -165,7 +165,7 @@ def main():
     # cam_method = "ablationcam"
 
     # Specify the target layers for CAM
-    if "resnet" in args.model:
+    if "resnet" in args.model or "botnet" in args.model:
         target_layers = [model.model.layer4[-1]]
     elif "swin" in args.model:
         target_layers = [model.model.layers[-1].blocks[-1].norm2]
