@@ -6,7 +6,7 @@ from pytorch_lightning.callbacks.progress.rich_progress import RichProgressBarTh
 def early_stopper():
     early_stop_callback = EarlyStopping(
         monitor='val_f1',
-        patience=10,
+        patience=20,
         strict=False,
         verbose=True,
         mode='max'
@@ -26,7 +26,7 @@ def checkpoint_saver(checkpoint_dir):
     
 def checkpoint_saver_optuna(checkpoint_dir):
     checkpoint_callback = ModelCheckpoint(dirpath=checkpoint_dir, 
-                                          save_top_k=3,
+                                          save_top_k=2,
                                           mode="max",
                                           monitor="val_f1",
                                           save_on_train_epoch_end=False,
