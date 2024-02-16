@@ -145,7 +145,7 @@ def main():
 
     model = LUSModelLightningModule.load_from_checkpoint(args.chkp, 
                                                           strict=False,
-                                                          map_location=torch.device('cuda'))
+                                                          map_location=torch.device('mps'))
     model.eval()
     
     model_name, version = get_model_name(args)
